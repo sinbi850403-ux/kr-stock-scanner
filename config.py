@@ -153,7 +153,7 @@ class Config:
             app_secret=g("KIS_APP_SECRET", ""),
             cano=cano,
             acnt_prdt_cd=prdt,
-            account_pwd=g("KIS_ACNT_PW", "") or g("KIS_ACCOUNT_PWD", ""),
+            account_pwd=g("ACNT_CODE", "") or g("KIS_ACNT_PW", "") or g("KIS_ACCOUNT_PWD", ""),
             telegram_token=g("TELEGRAM_TOKEN", ""),
             telegram_chat=g("TELEGRAM_CHAT_ID", ""),
             is_paper=is_paper,
