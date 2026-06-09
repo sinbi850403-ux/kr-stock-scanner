@@ -129,8 +129,8 @@ class Config:
         _er = g("ENABLE_REAL_TRADING", "")
         _rc = g("REAL_TRADING_CONFIRM", "")
         log.info("DEBUG ENABLE_REAL_TRADING=%r REAL_TRADING_CONFIRM=%r", _er, _rc)
-        enable_real = _er == "1"
-        confirm_real = _rc == "YES"
+        enable_real = _er.strip() in ("1", "YES", "true", "on")
+        confirm_real = _rc.strip() in ("1", "YES", "true", "on")
         is_paper = not (enable_real and confirm_real)
 
         cano, prdt = "", "01"
