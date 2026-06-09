@@ -47,7 +47,7 @@ def _signal():
     return Signal(symbol="005930", direction="long", entry_price=70200,
                   sl_price=69200, score=5,
                   layers={"L1": True, "L2": True, "L3": True, "L4": True,
-                          "L5": True, "L6": False},
+                          "L5": True, "L6": False, "L7": False},
                   atr=500, rvol=1.8, prev_close=69000)
 
 
@@ -55,7 +55,7 @@ def test_fmt_scan_signal_has_fields():
     txt = notify.fmt_scan_signal(_signal(), "삼성전자", provisional=True)
     assert "삼성전자" in txt
     assert "005930" in txt
-    assert "5/6" in txt
+    assert "5/7" in txt
     assert "70,200" in txt
     assert "잠정" in txt
 
