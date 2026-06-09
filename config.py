@@ -126,8 +126,11 @@ class Config:
     @classmethod
     def from_env(cls) -> "Config":
         g = os.getenv
-        enable_real = g("ENABLE_REAL_TRADING", "") == "1"
-        confirm_real = g("REAL_TRADING_CONFIRM", "") == "YES"
+        _er = g("ENABLE_REAL_TRADING", "")
+        _rc = g("REAL_TRADING_CONFIRM", "")
+        log.info("DEBUG ENABLE_REAL_TRADING=%r REAL_TRADING_CONFIRM=%r", _er, _rc)
+        enable_real = _er == "1"
+        confirm_real = _rc == "YES"
         is_paper = not (enable_real and confirm_real)
 
         cano, prdt = "", "01"
