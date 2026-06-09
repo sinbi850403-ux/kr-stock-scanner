@@ -90,24 +90,21 @@ def test_from_env_defaults_to_paper(monkeypatch):
     assert c.acnt_prdt_cd == "01"
 
 
-def test_from_env_only_one_flag_stays_paper(monkeypatch):
+def test_from_env_no_flag_stays_paper(monkeypatch):
     _set_required_env(monkeypatch)
-    monkeypatch.setenv("ENABLE_REAL_TRADING", "1")
-    monkeypatch.delenv("REAL_TRADING_CONFIRM", raising=False)
+    monkeypatch.delenv("ENABLE_REAL_TRADING", raising=False)
     assert Config.from_env().is_paper is True
 
 
-def test_from_env_wrong_confirm_stays_paper(monkeypatch):
+def test_from_env_flag_enables_real(monkeypatch):
     _set_required_env(monkeypatch)
     monkeypatch.setenv("ENABLE_REAL_TRADING", "1")
-    monkeypatch.setenv("REAL_TRADING_CONFIRM", "yes")  # 소문자 → 불충분
-    assert Config.from_env().is_paper is True
+    assert Config.from_env().is_paper is False
 
 
-def test_from_env_both_flags_enable_real(monkeypatch):
+def test_from_env_flag_yes_enables_real(monkeypatch):
     _set_required_env(monkeypatch)
-    monkeypatch.setenv("ENABLE_REAL_TRADING", "1")
-    monkeypatch.setenv("REAL_TRADING_CONFIRM", "YES")
+    monkeypatch.setenv("ENABLE_REAL_TRADING", "YES")
     assert Config.from_env().is_paper is False
 
 
