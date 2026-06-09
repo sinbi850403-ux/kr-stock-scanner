@@ -45,9 +45,6 @@ class FakeClient:
         self.candle_calls.append((code, period))
         return self._df if self._df is not None else make_df([100.0] * 100)
 
-    def get_investor_flow(self, code):
-        return (0.0, 0.0)
-
 
 def test_build_candidates_dedup_and_filter():
     ranks = {
@@ -62,8 +59,7 @@ def test_build_candidates_dedup_and_filter():
 
 # ── 스캔 ────────────────────────────────────────────────
 def _patch_gen(monkeypatch, score_map):
-    def fake_gen(code, d, w, m, cfg, prev_close=None, timestamp="",
-                 inst_qty=0.0, frgn_qty=0.0):
+    def fake_gen(code, d, w, m, cfg, prev_close=None, timestamp=""):
         sc = score_map.get(code)
         if sc is None:
             return None

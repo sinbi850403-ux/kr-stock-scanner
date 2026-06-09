@@ -26,7 +26,6 @@ _TR_MAP = {
     "price":    ("FHKST01010100", "FHKST01010100"),
     "vol_rank": ("FHPST01710000", "FHPST01710000"),
     "flx_rank": ("FHPST01700000", "FHPST01700000"),
-    "investor": ("FHKST01010900", "FHKST01010900"),  # 투자자별 매매동향 (모의/실전 동일)
 }
 
 _REAL_BASE = "https://openapi.koreainvestment.com:9443"

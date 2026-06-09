@@ -1,5 +1,5 @@
 """
-7레이어 컨플루언스 점수 (순수) — 일/주/월봉 기반.
+6레이어 컨플루언스 점수 (순수) — 일/주/월봉 기반.
 
 L1 3EMA 정배열   : e5>e20>e60 AND close>e60 (일봉)
 L2 실제 MTF      : 일(e20>e60 & macd>0) AND 주(e20>e60) AND 월(e20>e60)
@@ -7,7 +7,6 @@ L3 황금구간/OB   : 피보 황금구간(0.5~0.618) OR 활성 불리시 OB 내
 L4 모멘텀        : RSI 45 상향돌파 OR (MACD 골든크로스 & macd>0 & hist↑)
 L5 거래량 3증거  : (rvol≥1.7)+(OBV↑)+(close>VWAP) ≥ 2 AND not 분배 AND 양봉
 L6 구조 상태머신 : os == 1 (BOS 강세 확정)
-L7 기관/외국인   : 기관합계 OR 외국인 당일 순매수 > 0
 """
 import math
 from dataclasses import dataclass
@@ -27,7 +26,6 @@ class ConfluenceResult:
     l4: bool
     l5: bool
     l6: bool
-    l7: bool
     price: float
     atr: float
     rvol: float
@@ -60,11 +58,6 @@ def is_distribution(rvol_now, vol_strong, body, bar_range, close, hi10) -> bool:
     return bool(rvol_now >= vol_strong and small_body and close >= hi10 * 0.99)
 
 
-def l7_supply(inst_qty: float, frgn_qty: float) -> bool:
-    """기관합계 또는 외국인 당일 순매수 양수 = 세력 유입."""
-    return bool(inst_qty > 0 or frgn_qty > 0)
-
-
 def l5_volume(rvol_now, obv_now, obv_prev, close, vwap, open_, vol_surge,
               distribution) -> bool:
     cnt = ((1 if rvol_now >= vol_surge else 0)
@@ -91,8 +84,7 @@ def _f(x, default=0.0):
         return default
 
 
-def full(df_d, df_w, df_m, cfg: Config,
-         inst_qty: float = 0.0, frgn_qty: float = 0.0) -> Optional[ConfluenceResult]:
+def full(df_d, df_w, df_m, cfg: Config) -> Optional[ConfluenceResult]:
     if df_d is None or len(df_d) < cfg.ema_slow + 5:
         return None
 
@@ -143,10 +135,7 @@ def full(df_d, df_w, df_m, cfg: Config,
     # L6
     L6 = bool(state.os == 1)
 
-    # L7 기관/외국인 수급
-    L7 = l7_supply(inst_qty, frgn_qty)
-
-    score = int(L1) + int(L2) + int(L3) + int(L4) + int(L5) + int(L6) + int(L7)
-    return ConfluenceResult(score, L1, L2, L3, L4, L5, L6, L7,
+    score = int(L1) + int(L2) + int(L3) + int(L4) + int(L5) + int(L6)
+    return ConfluenceResult(score, L1, L2, L3, L4, L5, L6,
                             price, cur_atr, cur_rvol, state.bear_choch,
                             state.ob_bot, state)
