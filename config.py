@@ -127,11 +127,9 @@ class Config:
     def from_env(cls) -> "Config":
         g = os.getenv
         _er = g("ENABLE_REAL_TRADING", "")
-        _rc = g("REAL_TRADING_CONFIRM", "")
-        log.info("DEBUG ENABLE_REAL_TRADING=%r REAL_TRADING_CONFIRM=%r", _er, _rc)
+        log.info("DEBUG ENABLE_REAL_TRADING=%r", _er)
         enable_real = _er.strip() in ("1", "YES", "true", "on")
-        confirm_real = _rc.strip() in ("1", "YES", "true", "on")
-        is_paper = not (enable_real and confirm_real)
+        is_paper = not enable_real
 
         cano, prdt = "", "01"
         acct = g("KIS_ACCOUNT", "")
@@ -190,7 +188,7 @@ class Config:
             raise ValueError(f"필수 환경변수 누락: {', '.join(missing)}")
 
         if not self.is_paper and not self.account_pwd:
-            raise ValueError("실거래 모드에는 계좌 비밀번호(KIS_ACCOUNT_PWD)가 필요합니다.")
+            raise ValueError("실거래 모드에는 계좌 비밀번호(ACNT_CODE)가 필요합니다.")
 
         if self.risk_pct > 0.20:
             log.warning("RISK_PCT=%.0f%% — 1회 리스크가 매우 높습니다. 1~5%% 권장.",
