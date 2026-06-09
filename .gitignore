@@ -5,6 +5,14 @@ __pycache__/
 .venv/
 venv/
 
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 런타임 상태
+state_recovery.json
+
 # Secrets — 절대 커밋 금지
 .env
 *.env
