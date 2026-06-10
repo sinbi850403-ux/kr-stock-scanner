@@ -96,6 +96,27 @@ def test_scan_empty_candles_skipped(monkeypatch):
     assert sc.scan(now=NOW) == []
 
 
+def test_scan_logs_candidate_and_signal_count(monkeypatch, caplog):
+    """스캔마다 후보 수·신호 수를 INFO 로그로 남겨 Railway에서 원인 파악 가능."""
+    import logging
+    ranks = {("vol", "1"): [("000100", "에이"), ("000200", "비"), ("000300", "씨")]}
+    sc = scanner.Scanner(Config(), FakeClient(ranks))
+    _patch_gen(monkeypatch, {"000100": 5, "000200": 6, "000300": None})
+    with caplog.at_level(logging.INFO, logger="scanner"):
+        sc.scan(now=NOW)
+    assert "후보 3" in caplog.text      # 후보 수 로깅
+    assert "신호 2" in caplog.text      # 신호 수 로깅
+
+
+def test_scan_logs_zero_candidates(monkeypatch, caplog):
+    """후보가 0개이면 경고 로그 (API 오류 가능성)."""
+    import logging
+    sc = scanner.Scanner(Config(), FakeClient({}))  # 빈 랭킹
+    with caplog.at_level(logging.WARNING, logger="scanner"):
+        sc.scan(now=NOW)
+    assert "후보 0" in caplog.text
+
+
 # ── 주/월봉 캐싱 ────────────────────────────────────────
 def test_weekly_monthly_cached_same_day(monkeypatch):
     ranks = {("vol", "1"): [("000100", "에이")]}

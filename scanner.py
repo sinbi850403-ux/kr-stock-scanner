@@ -70,6 +70,10 @@ class Scanner:
         datestr = now.strftime("%Y%m%d")
 
         cand = self.build_candidates()
+        if not cand:
+            log.warning("스캔: 후보 0개 — KIS 랭킹 API 오류 가능성")
+        else:
+            log.info("스캔 시작: 후보 %d개", len(cand))
         signals = []
         for code, name in cand.items():
             if code in skip_symbols:
@@ -93,4 +97,7 @@ class Scanner:
                 log.error("스캔 오류 %s: %s", code, e)
 
         signals.sort(key=lambda x: x[1].score, reverse=True)
+        log.info("스캔 완료: 신호 %d개 (임계값 %d/7) | 최고점수 %s",
+                 len(signals), self.cfg.threshold,
+                 signals[0][1].score if signals else "-")
         return signals
