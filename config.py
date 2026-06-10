@@ -51,7 +51,7 @@ class Config:
 
     # ── 스캔 ──
     threshold: int = 5          # 알림/진입 점수 (5 or 6)
-    top_n: int = 30             # 각 순위 Top N
+    top_n: int = 100            # 각 순위 Top N
     scan_interval: int = 600    # 장중 스캔 주기(초)
     rate_per_sec: float = 8.0   # 초당 API 호출 상한
     final_scan_hhmm: str = "1540"  # 마감 후 확정 산출 시각
