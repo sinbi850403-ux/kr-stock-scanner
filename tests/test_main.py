@@ -155,12 +155,16 @@ def test_recovery_syncs_qty(tmp_path):
     assert bot.entry_info.holding_qty == 67   # 실제 잔고로 동기화
 
 
-def test_recovery_alerts_unknown_position(tmp_path):
+def test_recovery_no_telegram_for_manual_position(tmp_path, caplog):
+    """수동 매수 포지션은 텔레그램 에러 없이 로그 경고만 남긴다."""
+    import logging
     client = MockClient(holdings=[{"symbol": "999990", "qty": 5, "avg": 100, "price": 100}])
     n = MockNotifier()
     bot = _bot(tmp_path, client=client, notifier=n)
-    bot.startup_recovery()
-    assert "error" in n.calls             # 미등록 포지션 경고
+    with caplog.at_level(logging.WARNING):
+        bot.startup_recovery()
+    assert "error" not in n.calls         # 텔레그램 에러 알림 없어야 함
+    assert "999990" in caplog.text        # 로그엔 종목코드 남아야 함
 
 
 # ── run_cycle 분기 ──────────────────────────────────────

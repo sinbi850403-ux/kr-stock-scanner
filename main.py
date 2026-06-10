@@ -110,8 +110,8 @@ class TradingBot:
                 self.entry_info.holding_qty = pos["qty"]   # 실제 잔고로 동기화
                 log.info("복구: 포지션 동기화 %s qty=%s", self.entry_info.symbol, pos["qty"])
         elif holdings:
-            self.notifier.alert_error(
-                f"미등록 보유 포지션 발견: {list(held)} — 수동 확인 필요")
+            # 수동 매수 포지션은 텔레그램 스팸 없이 로그만 남김
+            log.warning("미등록 보유 포지션(수동): %s — 봇이 관리하지 않음", list(held))
         self.save_state()
 
     # ── 일일 리셋 ──
@@ -267,7 +267,7 @@ def main():
     bot = build_bot(cfg)
     mode = "모의투자" if cfg.is_paper else "⚠️실전"
     bot.notifier.send(f"🤖 국내주식 컨플루언스 자동매매 ON [{mode}]\n"
-                      f"기준 {cfg.threshold}/6 | 리스크 {cfg.risk_pct*100:.0f}% | "
+                      f"기준 {cfg.threshold}/7 | 리스크 {cfg.risk_pct*100:.0f}% | "
                       f"포지션 최대 {cfg.max_positions}")
     bot.startup_recovery()
     while True:
