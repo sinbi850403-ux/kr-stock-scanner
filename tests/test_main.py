@@ -237,6 +237,33 @@ def test_no_kill_switch_small_loss(tmp_path):
     assert bot.kill_switch is False
 
 
+def test_phase_prescan_at_0830(tmp_path):
+    """scan_start=0830이면 8시30분도 scan 페이즈."""
+    bot = _bot(tmp_path, cfg=_cfg())
+    bot.last_reset_date = "20260609"
+    assert bot._phase(_dt(8, 30)) == "scan"
+
+
+def test_phase_idle_before_scan_start(tmp_path):
+    """8시 00분은 scan_start 이전이므로 idle."""
+    bot = _bot(tmp_path, cfg=_cfg())
+    bot.last_reset_date = "20260609"
+    assert bot._phase(_dt(8, 0)) == "idle"
+
+
+def test_run_cycle_prescan_sends_alert(tmp_path):
+    """8시30분에도 스캔 알림 발송, 주문은 없음."""
+    sc = MockScanner(signals=[("에이", _signal())])
+    n = MockNotifier()
+    bot = _bot(tmp_path, scanner=sc, notifier=n)
+    bot.last_reset_date = "20260609"
+    bot.run_cycle(now=_dt(8, 30))
+    assert sc.scanned == 1
+    assert "scan" in n.calls
+    assert bot.entry_info is None
+    assert bot.pending_signals == []
+
+
 def test_run_cycle_intraday_alert_only(tmp_path):
     sc = MockScanner(signals=[("에이", _signal())])
     n = MockNotifier()

@@ -142,3 +142,8 @@ def test_validate_high_risk_warns(caplog):
                telegram_token="t", telegram_chat="c", risk_pct=0.30)
     c.validate()
     assert any("리스크" in r.message for r in caplog.records)
+
+
+def test_default_scan_start():
+    """장전 스캔 시작 시각은 기본 0830."""
+    assert Config().scan_start == "0830"

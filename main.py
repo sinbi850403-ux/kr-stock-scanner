@@ -141,7 +141,7 @@ class TradingBot:
             return "postclose"
         if self.cfg.entry_start <= hhmm < self.cfg.entry_open_end:
             return "entry"
-        if self.cfg.entry_start <= hhmm < self.cfg.entry_end:
+        if self.cfg.scan_start <= hhmm < self.cfg.entry_end:
             return "scan"
         return "idle"
 

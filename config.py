@@ -108,6 +108,7 @@ class Config:
     daily_max_loss_pct: float = 0.03
 
     # ── 거래시간 (KST "HHMM") ──
+    scan_start: str = "0830"       # 장전 스캔 시작 (장전동시호가 시작)
     market_open: str = "0900"
     entry_start: str = "0910"
     entry_open_end: str = "0940"   # 익일 진입 실행 창 종료
