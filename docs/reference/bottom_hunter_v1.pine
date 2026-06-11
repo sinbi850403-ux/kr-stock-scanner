@@ -1,0 +1,234 @@
+//@version=5
+// ═══════════════════════════════════════════════════════════════
+// 국내주식 바닥헌터 v1 — 저점 반전 5증거 스코어
+//
+// 철학: 최저점 "예측"이 아니라 바닥 형성 "확인" 후 저점 부근 진입.
+//       B5(반전 확인봉)는 필수 — 확인 없는 진입은 떨어지는 칼.
+//
+// 5증거:
+//  B1 과대낙폭   — EMA20 하방 이격 -N% 이상 or 볼린저 하단 이탈
+//  B2 유동성스윕 — 직전 스윙저점 하향 이탈 후 종가 회복 (SFP/스탑헌트)
+//  B3 캐피츌레이션 — RVOL 2x+ 대량 해머 (투매 소진)
+//  B4 강세 다이버전스 — 가격 LL vs RSI HL (피봇 확정 기준, 비반복)
+//  B5 반전 확인봉 — 양봉 + 전봉 고가 돌파 (필수 조건)
+//
+// 손절: 스윕 저점 - ATR×0.5 (명확한 무효화 지점)
+// 목표: TP1 = max(EMA20, 1R) / TP2 = 2R
+//
+// ⚠ 주의: 관리종목/거래정지/투자경고 여부는 Pine에서 조회 불가 —
+//         신호 종목은 반드시 HTS에서 종목 상태 확인 후 진입할 것.
+// ═══════════════════════════════════════════════════════════════
+indicator("국내주식 바닥헌터 v1", overlay=true, max_labels_count=500, max_lines_count=500)
+
+// ═══════════════════════════════════════════════════════════════
+// §1. 입력
+// ═══════════════════════════════════════════════════════════════
+pivLen       = input.int(12, "스윙 피봇 좌우 봉수", minval=3)
+extDnPct     = input.float(7.0, "B1 과대낙폭: EMA20 하방 이격 % 이상", step=0.5)
+rvolCapMin   = input.float(2.0, "B3 캐피츌레이션 RVOL 최소", step=0.1)
+recentWin    = input.int(7, "증거 유효 봉수 (스윕/해머/다이버전스)", minval=1)
+reqScore     = input.int(4, "요구 점수 (5점 만점, B5는 항상 필수)", minval=3, maxval=5)
+slAtrMult    = input.float(0.5, "손절 여유 (스윕저점 - ATR×n)", step=0.1)
+gapThreshPct = input.float(3.0, "갭 차단 임계 % (위아래 공통)", step=0.5)
+cooldown     = input.int(5, "신호 쿨다운 봉수", minval=0)
+showDiv      = input.bool(true, "다이버전스 라인 표시")
+
+// ═══════════════════════════════════════════════════════════════
+// §2. 지표
+// ═══════════════════════════════════════════════════════════════
+ema20  = ta.ema(close, 20)
+ema60  = ta.ema(close, 60)
+rsi    = ta.rsi(close, 14)
+atr    = ta.atr(14)
+volAvg = ta.sma(volume, 20)
+rvol   = volAvg > 0 ? volume / volAvg : 0.0
+[bbM, bbU, bbL] = ta.bb(close, 20, 2.0)
+
+// ═══════════════════════════════════════════════════════════════
+// §3. 피봇 / 스윙로우 / 다이버전스 추적 (피봇 확정 기준 = 비반복)
+// ═══════════════════════════════════════════════════════════════
+pl = ta.pivotlow(low, pivLen, pivLen)
+
+var float swingLowLvl = na    // 직전 확정 스윙저점 (스윕 판정 기준)
+var float prevPlPrice = na
+var float prevPlRsi   = na
+var int   prevPlBar   = na
+var float lastPlPrice = na
+var float lastPlRsi   = na
+var int   lastPlBar   = na
+
+// 다이버전스 판정은 "이전 swingLowLvl 갱신 전" 값으로 — 갱신 순서 주의
+plConfirmed = not na(pl)
+if plConfirmed
+    prevPlPrice := lastPlPrice
+    prevPlRsi   := lastPlRsi
+    prevPlBar   := lastPlBar
+    lastPlPrice := pl
+    lastPlRsi   := rsi[pivLen]
+    lastPlBar   := bar_index - pivLen
+    swingLowLvl := pl
+
+// B4 이벤트: 가격은 저점 낮춤 + RSI는 저점 높임
+bullDivEvt = plConfirmed and not na(prevPlPrice) and lastPlPrice < prevPlPrice and lastPlRsi > prevPlRsi
+
+// 드로잉 한계 가드 — 너무 오래된 피봇 연결 시 런타임 에러 방지
+if showDiv and bullDivEvt and not na(prevPlBar) and (bar_index - prevPlBar) < 9000
+    line.new(prevPlBar, prevPlPrice, lastPlBar, lastPlPrice, color=color.new(color.green, 20), width=2, style=line.style_dashed)
+
+// ═══════════════════════════════════════════════════════════════
+// §4. 5증거 판정
+// ═══════════════════════════════════════════════════════════════
+// B1 과대낙폭 (평균회귀 압력)
+extPct = ema20 != 0 ? (close - ema20) / ema20 * 100.0 : 0.0
+B1 = extPct <= -extDnPct or close < bbL
+
+// B2 유동성 스윕 — 스윙저점 하향 이탈 후 종가 회복 (이벤트, N봉 유효)
+sweepEvt = not na(swingLowLvl) and low < swingLowLvl and close > swingLowLvl
+B2 = nz(ta.barssince(sweepEvt), 99999) <= recentWin
+
+// B3 캐피츌레이션 해머 — 대량 거래 + 긴 아래꼬리 + 상단 마감 (이벤트, N봉 유효)
+body      = math.abs(close - open)
+lowerWick = math.min(open, close) - low
+hammer    = lowerWick > body * 1.5 and close >= (high + low) / 2
+capitEvt  = rvol >= rvolCapMin and hammer and close < ema20
+B3 = nz(ta.barssince(capitEvt), 99999) <= recentWin
+
+// B4 강세 다이버전스 (이벤트, N봉 유효 — 피봇 확정 지연 포함)
+B4 = nz(ta.barssince(bullDivEvt), 99999) <= recentWin
+
+// B5 반전 확인봉 (필수) — 양봉 + 전봉 고가 돌파
+B5 = close > open and close > high[1]
+
+score = (B1 ? 1 : 0) + (B2 ? 1 : 0) + (B3 ? 1 : 0) + (B4 ? 1 : 0) + (B5 ? 1 : 0)
+
+// ═══════════════════════════════════════════════════════════════
+// §5. 한국시장 게이트
+// ═══════════════════════════════════════════════════════════════
+tz      = syminfo.timezone
+isIntra = timeframe.isintraday
+inSess  = not na(time(timeframe.period, "0900-1520:23456", tz))
+hr      = hour(time, tz)
+mn      = minute(time, tz)
+timeOK  = isIntra ? (inSess and not (hr == 9 and mn < 10) and not (hr == 15 and mn >= 15)) : true
+
+gapPct = close[1] != 0 ? (open - close[1]) / close[1] * 100.0 : 0.0
+
+dPrevClose  = request.security(syminfo.tickerid, "D", close[1], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+movePct     = not na(dPrevClose) and dPrevClose != 0 ? (close - dPrevClose) / dPrevClose * 100.0 : 0.0
+nearLimitDn = movePct < -27.0     // 하한가 부근 — 다음날 추가 하락 위험, 진입 금지
+
+// [검토반영] 갭 비대칭 차단 — 갭다운은 칼날 지속 위험이라 차단,
+// 갭업은 바닥 반등의 시작인 경우가 많아 임계 2배까지 허용
+gapOK  = gapPct > -gapThreshPct and gapPct < gapThreshPct * 2.0
+gateOK = timeOK and not nearLimitDn and gapOK
+
+// ═══════════════════════════════════════════════════════════════
+// §6. 신호 (B5 필수 + 쿨다운 + 확정봉)
+// ═══════════════════════════════════════════════════════════════
+var int lastSigBar = na
+cooldownOK = na(lastSigBar) or (bar_index - lastSigBar) > cooldown
+
+signal = score >= reqScore and B5 and gateOK and barstate.isconfirmed and cooldownOK
+
+// 임박 — B5(확인봉)만 남은 상태. [검토반영] B1(과대낙폭) 필수 — 횡보장 오발 방지
+nearState = not signal and not B5 and B1 and gateOK and barstate.isconfirmed and (score + 1 >= reqScore)
+nearSig   = nearState and not nearState[1]
+
+// 손절/목표 (신호 봉 기준)
+// sweepBase ≤ 당일 low ≤ close 이므로 risk > 0 수학적 보장
+sweepBase = not na(swingLowLvl) ? math.min(swingLowLvl, ta.lowest(low, 5)) : ta.lowest(low, 5)
+slPx  = sweepBase - atr * slAtrMult
+risk  = close - slPx
+// [검토반영] TP1 퇴화 방지 — 이미 EMA20 근처까지 반등했으면 최소 1R 보장
+tp1Px = math.max(ema20, close + risk * 1.0)
+tp2Px = close + risk * 2.0       // 2R
+
+if signal
+    lastSigBar := bar_index
+    txt = "🎯 바닥신호 " + str.tostring(score) + "/5" +
+          "\n진입 " + str.tostring(close, format.mintick) +
+          "\n손절 " + str.tostring(slPx, format.mintick) + " (-" + str.tostring(risk / close * 100, "#.#") + "%)" +
+          "\n목표1 " + str.tostring(tp1Px, format.mintick) + " (EMA20)" +
+          "\n목표2 " + str.tostring(tp2Px, format.mintick) + " (2R)"
+    label.new(bar_index, low, txt, style=label.style_label_up, color=color.new(color.green, 10), textcolor=color.white, size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// §7. 시각화
+// ═══════════════════════════════════════════════════════════════
+plot(ema20, "EMA20", color=color.orange, linewidth=1)
+plot(ema60, "EMA60", color=color.fuchsia, linewidth=2)
+plot(bbL,   "BB 하단", color=color.new(color.gray, 50), linewidth=1)
+
+plotshape(signal,   title="바닥신호", style=shape.labelup,  location=location.belowbar, color=color.new(color.green, 0),  text="바닥", textcolor=color.white, size=size.small)
+plotshape(nearSig,  title="임박",     style=shape.diamond,  location=location.belowbar, color=color.new(color.yellow, 10), text="🔥",   textcolor=color.white, size=size.tiny)
+plotshape(sweepEvt and barstate.isconfirmed, title="스윕", style=shape.xcross, location=location.belowbar, color=color.new(color.aqua, 20), size=size.tiny)
+
+bgcolor(signal ? color.new(color.green, 85) : nearState ? color.new(color.yellow, 95) : na)
+
+// ═══════════════════════════════════════════════════════════════
+// §8. 대시보드 (화이트, 불투명)
+// ═══════════════════════════════════════════════════════════════
+cText  = color.rgb(20, 20, 20)
+cSub   = color.rgb(110, 110, 110)
+cPass  = color.rgb(0, 140, 60)
+cFail  = color.rgb(165, 165, 165)
+cWarn  = color.rgb(205, 125, 0)
+cBlue  = color.rgb(25, 85, 195)
+cKeyBg = color.rgb(228, 235, 248)
+cKeyTx = color.rgb(35, 60, 130)
+
+f_bar5(n) =>
+    s = ""
+    for i = 1 to 5
+        s := s + (i <= n ? "▓" : "░")
+    s
+
+scoreColor = score >= 5 ? cPass : score >= reqScore ? cBlue : score == reqScore - 1 ? cWarn : cFail
+hdrBg      = score >= 5 ? color.new(color.green, 15) :
+             score >= reqScore ? color.new(color.blue, 15) :
+             score == reqScore - 1 ? color.new(color.orange, 15) : color.new(color.gray, 15)
+
+var table dash = table.new(position.top_right, 2, 10, border_width=1, bgcolor=color.white, border_color=color.rgb(205, 205, 205))
+
+if barstate.islast
+    table.cell(dash, 0, 0, "바닥헌터 v1", text_color=color.white, text_size=size.small, bgcolor=hdrBg)
+    table.cell(dash, 1, 0, str.tostring(score) + "/5 " + (score >= reqScore and B5 ? "포착" : score >= reqScore - 1 ? "임박🔥" : "탐색중"), text_color=color.white, text_size=size.small, bgcolor=hdrBg)
+
+    table.cell(dash, 0, 1, "B1 과대낙폭", text_color=cText, text_size=size.small)
+    table.cell(dash, 1, 1, (B1 ? "✔ " : "· ") + (extPct >= 0 ? "+" : "") + str.tostring(extPct, "#.#") + "%", text_color=B1 ? cPass : cFail, text_size=size.small)
+
+    table.cell(dash, 0, 2, "B2 유동성스윕", text_color=cText, text_size=size.small)
+    table.cell(dash, 1, 2, B2 ? "✔" : "· 스윕 없음", text_color=B2 ? cPass : cFail, text_size=size.small)
+
+    table.cell(dash, 0, 3, "B3 캐피츌레이션", text_color=cText, text_size=size.small)
+    table.cell(dash, 1, 3, (B3 ? "✔ " : "· ") + str.tostring(rvol, "#.#") + "x", text_color=B3 ? cPass : cFail, text_size=size.small)
+
+    table.cell(dash, 0, 4, "B4 다이버전스", text_color=cText, text_size=size.small)
+    table.cell(dash, 1, 4, B4 ? "✔ RSI HL" : "· 없음", text_color=B4 ? cPass : cFail, text_size=size.small)
+
+    table.cell(dash, 0, 5, "🔑 B5 확인봉(필수)", text_color=cKeyTx, text_size=size.small, bgcolor=cKeyBg)
+    table.cell(dash, 1, 5, B5 ? "✔ 양봉+고가돌파" : "· 대기", text_color=B5 ? cPass : cWarn, text_size=size.small, bgcolor=cKeyBg)
+
+    table.cell(dash, 0, 6, "RSI / RVOL", text_color=cSub, text_size=size.small)
+    table.cell(dash, 1, 6, str.tostring(rsi, "#.0") + " / " + str.tostring(rvol, "#.#") + "x", text_color=cSub, text_size=size.small)
+
+    table.cell(dash, 0, 7, "손절 기준", text_color=cSub, text_size=size.small)
+    table.cell(dash, 1, 7, str.tostring(slPx, format.mintick), text_color=cSub, text_size=size.small)
+
+    table.cell(dash, 0, 8, f_bar5(score), text_color=scoreColor, text_size=size.small)
+    table.cell(dash, 1, 8, str.tostring(score) + "/5", text_color=scoreColor, text_size=size.small)
+
+    table.cell(dash, 0, 9, "게이트", text_color=cBlue, text_size=size.small)
+    table.cell(dash, 1, 9, gateOK ? "정상" : "차단(시간/갭/하한가)", text_color=gateOK ? cPass : color.red, text_size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// §9. 알림
+// ═══════════════════════════════════════════════════════════════
+if signal
+    alert("[" + syminfo.ticker + "] 🎯 바닥신호 " + str.tostring(score) + "/5 @ " + str.tostring(close) +
+          " 손절 " + str.tostring(slPx, format.mintick), alert.freq_once_per_bar_close)
+if nearSig
+    alert("[" + syminfo.ticker + "] 🔥 바닥 임박 " + str.tostring(score) + "/5 (확인봉 대기) @ " + str.tostring(close), alert.freq_once_per_bar_close)
+
+alertcondition(signal,  title="바닥 신호",   message="{{ticker}} 바닥헌터 신호! {{close}}")
+alertcondition(nearSig, title="바닥 임박 🔥", message="{{ticker}} 바닥 임박 (확인봉 대기) {{close}}")
