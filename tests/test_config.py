@@ -149,6 +149,11 @@ def test_default_scan_start():
     assert Config().scan_start == "0830"
 
 
+def test_default_evening_scan_hhmm():
+    """저녁 추가 스캔은 기본 1700."""
+    assert Config().evening_scan_hhmm == "1700"
+
+
 def test_tr_id_cap_rank_same_for_both():
     """시가총액 상위 랭킹 TR은 모의/실전 동일."""
     assert Config(is_paper=True).tr_id("cap_rank") == "FHPST01740000"

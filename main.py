@@ -138,6 +138,8 @@ class TradingBot:
         if now.weekday() >= 5 or now.strftime("%Y%m%d") in self.holidays:
             return "closed"
         hhmm = now.strftime("%H%M")
+        if hhmm >= self.cfg.evening_scan_hhmm:
+            return "evening"
         if hhmm >= self.cfg.final_scan_hhmm:
             return "postclose"
         if self.cfg.entry_start <= hhmm < self.cfg.entry_open_end:
@@ -164,9 +166,11 @@ class TradingBot:
             if self.pending_signals:
                 self._try_enter(now)
             else:
-                self._intraday_alert_scan(now)   # pending 없으면 계속 스캔
+                self._intraday_alert_scan(now)
         elif phase == "postclose":
             self._post_close_scan(now)
+        elif phase == "evening":
+            self._evening_scan(now)
         elif phase == "scan":
             self._intraday_alert_scan(now)
         self.save_state()
@@ -237,6 +241,23 @@ class TradingBot:
             if key not in self.alerted:
                 self.notifier.alert_scan_signal(sig, name, provisional=False)
                 self.alerted.add(key)
+
+    def _evening_scan(self, now):
+        """17시 추가 스캔 — 새 종목만 pending 병합 + 알림. 하루 1회."""
+        sentinel = f"evening_{now:%Y%m%d}"
+        if sentinel in self.alerted:
+            return
+        self.alerted.add(sentinel)
+        skip = {self.entry_info.symbol} if self.entry_info else set()
+        existing_syms = {s.symbol for _, s in self.pending_signals}
+        for name, sig in self.scanner.scan(skip_symbols=skip, now=now):
+            key = f"{sig.symbol}_{now:%Y%m%d}"
+            if key not in self.alerted:
+                self.notifier.alert_scan_signal(sig, name, provisional=False)
+                self.alerted.add(key)
+            if sig.symbol not in existing_syms:
+                self.pending_signals.append((name, sig))
+                existing_syms.add(sig.symbol)
 
     def _intraday_alert_scan(self, now):
         for name, sig in self.scanner.scan(now=now):

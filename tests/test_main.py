@@ -287,6 +287,67 @@ def test_run_cycle_intraday_alert_only(tmp_path):
     assert bot.pending_signals == []     # 장중은 pending 저장 안 함
 
 
+def test_phase_evening_at_1700(tmp_path):
+    """17:00은 evening 페이즈."""
+    bot = _bot(tmp_path, cfg=_cfg())
+    bot.last_reset_date = "20260609"
+    assert bot._phase(_dt(17, 0)) == "evening"
+
+
+def test_phase_postclose_before_evening(tmp_path):
+    """15:40~16:59는 postclose."""
+    bot = _bot(tmp_path, cfg=_cfg())
+    bot.last_reset_date = "20260609"
+    assert bot._phase(_dt(16, 0)) == "postclose"
+
+
+def test_run_cycle_evening_alerts_new_signal(tmp_path):
+    """17시 스캔에서 새 종목 발견 시 알림 발송."""
+    sc = MockScanner(signals=[("에이", _signal())])
+    n = MockNotifier()
+    bot = _bot(tmp_path, scanner=sc, notifier=n)
+    bot.last_reset_date = "20260609"
+    bot.run_cycle(now=_dt(17, 0))
+    assert sc.scanned == 1
+    assert "scan" in n.calls
+
+
+def test_run_cycle_evening_runs_once_per_day(tmp_path):
+    """17시 스캔은 하루 1회만 실행."""
+    sc = MockScanner(signals=[("에이", _signal())])
+    bot = _bot(tmp_path, scanner=sc)
+    bot.last_reset_date = "20260609"
+    bot.run_cycle(now=_dt(17, 0))
+    bot.run_cycle(now=_dt(17, 10))  # 10분 뒤 재호출
+    assert sc.scanned == 1          # 두 번째엔 스캔 안 함
+
+
+def test_run_cycle_evening_merges_pending(tmp_path):
+    """저녁 스캔 결과가 기존 pending에 병합된다."""
+    existing = _signal(symbol="000200")
+    new_sig = _signal(symbol="000300")
+    sc = MockScanner(signals=[("씨", new_sig)])
+    bot = _bot(tmp_path, scanner=sc)
+    bot.last_reset_date = "20260609"
+    bot.pending_signals = [("비", existing)]   # 이미 있는 pending
+    bot.run_cycle(now=_dt(17, 0))
+    symbols = [s.symbol for _, s in bot.pending_signals]
+    assert "000200" in symbols  # 기존 유지
+    assert "000300" in symbols  # 새로 추가
+
+
+def test_run_cycle_evening_no_duplicate_alert(tmp_path):
+    """15:40 postclose에서 이미 알림 간 종목은 17시에 재발송 안 함."""
+    sig = _signal()
+    sc = MockScanner(signals=[("에이", sig)])
+    n = MockNotifier()
+    bot = _bot(tmp_path, scanner=sc, notifier=n)
+    bot.last_reset_date = "20260609"
+    bot.alerted = {f"{sig.symbol}_20260609"}   # 이미 알림 발송됨
+    bot.run_cycle(now=_dt(17, 0))
+    assert n.calls.count("scan") == 0           # 재발송 없음
+
+
 def test_manage_position_closes_and_counts(tmp_path):
     client = MockClient(
         holdings=[{"symbol": "000100", "qty": 100, "avg": 70200, "price": 69000}],

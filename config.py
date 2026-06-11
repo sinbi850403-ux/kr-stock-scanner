@@ -55,7 +55,8 @@ class Config:
     top_n: int = 100            # 각 순위 Top N
     scan_interval: int = 600    # 장중 스캔 주기(초)
     rate_per_sec: float = 8.0   # 초당 API 호출 상한
-    final_scan_hhmm: str = "1540"  # 마감 후 확정 산출 시각
+    final_scan_hhmm: str = "1540"   # 마감 후 확정 산출 시각
+    evening_scan_hhmm: str = "1700" # 저녁 추가 스캔 (새 종목 알림, 하루 1회)
 
     # ── MTF 캔들 수 ──
     daily_count: int = 100
