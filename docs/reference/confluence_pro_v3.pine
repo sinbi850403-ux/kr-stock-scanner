@@ -1,4 +1,4 @@
-//@version=5
+﻿//@version=5
 // ═══════════════════════════════════════════════════════════════
 // 국내주식 컨플루언스 PRO v3
 // v3 변경 (3렌즈 적대적 검토 반영):
@@ -511,12 +511,13 @@ supplySt = (supplyOK ? "↑ " : "↓ ") + "CMF " + str.tostring(cmf, "#.##") + "
 extSt    = (overExt ? "⛔ " : "") + (extPct >= 0 ? "+" : "") + str.tostring(extPct, "#.#") + "% / 한도 " + (extMaxPct > 0 ? str.tostring(extMaxPct, "#") + "%" : "꺼짐")
 
 scoreColor = activeScore >= 6 ? color.lime : activeScore >= confReq ? color.aqua : activeScore == confReq - 1 ? color.yellow : color.gray
-hdrBg      = overExt and activeScore >= confReq ? color.new(color.red,55) :
-             activeScore >= 6 ? color.new(color.green,45) :
-             activeScore >= confReq ? color.new(color.blue,55) :
-             activeScore == confReq - 1 ? color.new(color.orange,55) : color.new(color.gray,50)
+hdrBg      = overExt and activeScore >= confReq ? color.new(color.red,15) :
+             activeScore >= 6 ? color.new(color.green,15) :
+             activeScore >= confReq ? color.new(color.blue,15) :
+             activeScore == confReq - 1 ? color.new(color.orange,15) : color.new(color.gray,15)
 
-var table dash = table.new(position.top_left, 2, 16, border_width=1, bgcolor=color.new(color.black,30))
+// [v3.1] 배경 완전 불투명 — 차트 요소 비침 방지
+var table dash = table.new(position.top_left, 2, 16, border_width=1, bgcolor=color.rgb(12, 16, 22), border_color=color.new(color.gray, 70))
 
 if barstate.islast
     table.cell(dash, 0, 0, "컨플루언스 PRO v3",                       text_color=color.yellow, text_size=size.small, bgcolor=hdrBg)
@@ -541,11 +542,11 @@ if barstate.islast
     table.cell(dash, 0, 6, "L3  황금구간/OB",    text_color=color.white,  text_size=size.small)
     table.cell(dash, 1, 6, l3st,                 text_color=L3_buy ? color.lime : color.gray, text_size=size.small)
 
-    table.cell(dash, 0, 7, "🔑 L4  모멘텀",      text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy,60))
-    table.cell(dash, 1, 7, l4st,                 text_color=L4_buy ? color.lime : color.orange, text_size=size.small, bgcolor=color.new(color.navy,60))
+    table.cell(dash, 0, 7, "🔑 L4  모멘텀",      text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy,20))
+    table.cell(dash, 1, 7, l4st,                 text_color=L4_buy ? color.lime : color.orange, text_size=size.small, bgcolor=color.new(color.navy,20))
 
-    table.cell(dash, 0, 8, "🔑 L5  거래량/VWAP", text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy,60))
-    table.cell(dash, 1, 8, l5st,                 text_color=L5_buy ? color.lime : color.orange, text_size=size.small, bgcolor=color.new(color.navy,60))
+    table.cell(dash, 0, 8, "🔑 L5  거래량/VWAP", text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy,20))
+    table.cell(dash, 1, 8, l5st,                 text_color=L5_buy ? color.lime : color.orange, text_size=size.small, bgcolor=color.new(color.navy,20))
 
     table.cell(dash, 0, 9,  "L6  BOS/CHoCH",    text_color=color.white,  text_size=size.small)
     table.cell(dash, 1, 9,  l6st,               text_color=L6_buy ? color.lime : color.gray, text_size=size.small)
