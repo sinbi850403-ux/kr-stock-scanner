@@ -159,8 +159,11 @@ class TradingBot:
             self._manage_position(now)
             return
 
-        if phase == "entry" and self.pending_signals:
-            self._try_enter(now)
+        if phase == "entry":
+            if self.pending_signals:
+                self._try_enter(now)
+            else:
+                self._intraday_alert_scan(now)   # pending 없으면 계속 스캔
         elif phase == "postclose":
             self._post_close_scan(now)
         elif phase == "scan":

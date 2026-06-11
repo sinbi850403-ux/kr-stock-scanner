@@ -168,6 +168,17 @@ def test_recovery_no_telegram_for_manual_position(tmp_path, caplog):
 
 
 # ── run_cycle 분기 ──────────────────────────────────────
+def test_run_cycle_entry_phase_scans_when_no_pending(tmp_path):
+    """entry 페이즈에 pending 신호 없으면 잠정 알림 스캔을 돌린다."""
+    sc = MockScanner(signals=[("에이", _signal())])
+    n = MockNotifier()
+    bot = _bot(tmp_path, scanner=sc, notifier=n)
+    bot.last_reset_date = "20260609"
+    bot.run_cycle(now=_dt(9, 20))   # entry 페이즈, pending 없음
+    assert sc.scanned == 1
+    assert "scan" in n.calls
+
+
 def test_run_cycle_manages_position(tmp_path):
     client = MockClient(holdings=[{"symbol": "000100", "qty": 100, "avg": 70200, "price": 70500}],
                         price=70500)
