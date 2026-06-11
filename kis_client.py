@@ -252,20 +252,6 @@ class KISClient:
             })
         return out
 
-    # ── 투자자별 순매수 ──
-    def get_investor_flow(self, symbol: str) -> tuple:
-        """기관/외국인 당일 순매수 수량 반환 (inst_qty, frgn_qty). 실패 시 (0.0, 0.0)."""
-        params = {
-            "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd": symbol,
-        }
-        j = self._get("/uapi/domestic-stock/v1/quotations/inquire-investor",
-                      self.cfg.tr_id("investor"), params)
-        o = j.get("output") or {}
-        inst = _num(o, "orgn_ntby_qty")
-        frgn = _num(o, "frgn_ntby_qty")
-        return (inst, frgn)
-
     # ── 순위 (깔때기 1단계) ──
     def volume_rank(self, blng_cls="1", market="0000"):
         params = {

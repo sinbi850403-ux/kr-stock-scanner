@@ -87,21 +87,15 @@ class Scanner:
                 if df_d is None or df_d.empty:
                     continue
                 prev_close = float(df_d["close"].iloc[-2]) if len(df_d) >= 2 else None
-                inst_qty, frgn_qty = 0.0, 0.0
-                try:
-                    inst_qty, frgn_qty = self.client.get_investor_flow(code)
-                except Exception as e:  # noqa: BLE001
-                    log.debug("수급조회 실패 %s: %s", code, e)
                 sig = strategy.generate_signal(code, df_d, df_w, df_m, self.cfg,
-                                               prev_close=prev_close,
-                                               inst_qty=inst_qty, frgn_qty=frgn_qty)
+                                               prev_close=prev_close)
                 if sig:
                     signals.append((name, sig))
             except Exception as e:                       # noqa: BLE001
                 log.error("스캔 오류 %s: %s", code, e)
 
         signals.sort(key=lambda x: x[1].score, reverse=True)
-        log.info("스캔 완료: 신호 %d개 (임계값 %d/7) | 최고점수 %s",
+        log.info("스캔 완료: 신호 %d개 (임계값 %d/6) | 최고점수 %s",
                  len(signals), self.cfg.threshold,
                  signals[0][1].score if signals else "-")
         return signals

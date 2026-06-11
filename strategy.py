@@ -31,10 +31,8 @@ class Signal:
 
 def generate_signal(symbol, df_d, df_w, df_m, cfg: Config,
                     prev_close: Optional[float] = None,
-                    timestamp: str = "",
-                    inst_qty: float = 0.0,
-                    frgn_qty: float = 0.0) -> Optional[Signal]:
-    res = cf.full(df_d, df_w, df_m, cfg, inst_qty, frgn_qty)
+                    timestamp: str = "") -> Optional[Signal]:
+    res = cf.full(df_d, df_w, df_m, cfg)
     if res is None or res.score < cfg.threshold:
         return None
 
@@ -47,7 +45,7 @@ def generate_signal(symbol, df_d, df_w, df_m, cfg: Config,
         return None
 
     layers = {"L1": res.l1, "L2": res.l2, "L3": res.l3,
-              "L4": res.l4, "L5": res.l5, "L6": res.l6, "L7": res.l7}
+              "L4": res.l4, "L5": res.l5, "L6": res.l6}
     return Signal(symbol=symbol, direction="long",
                   entry_price=res.price, sl_price=sl, score=res.score,
                   layers=layers, atr=res.atr, rvol=res.rvol,

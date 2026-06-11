@@ -362,3 +362,125 @@ def test_manage_position_closes_and_counts(tmp_path):
     bot.run_cycle(now=_dt(10, 30))
     assert bot.entry_info is None
     assert bot.daily_trade_count == 1
+
+
+# ── 역신호 슬롯 검사 ────────────────────────────────────────
+def test_counter_slot_am_slot(tmp_path):
+    """09:30은 AM 슬롯 (hhmm < 1200)."""
+    client = MockClient(
+        holdings=[{"symbol": "000100", "qty": 100, "avg": 70200, "price": 70500}],
+        price=70500)
+    t = MockTrader()
+    bot = _bot(tmp_path, client=client, trader=t)
+    bot.entry_info = _entry_info()
+    bot.last_reset_date = "20260609"
+    bot._check_counter(bot.entry_info.symbol, _dt(9, 30))
+    # AM 슬롯 키 생성 확인
+    assert "20260609_am" in bot.counter_checked
+
+
+def test_counter_slot_md_slot(tmp_path):
+    """13:00은 MD 슬롯 (1200 <= hhmm < 1400)."""
+    client = MockClient(
+        holdings=[{"symbol": "000100", "qty": 100, "avg": 70200, "price": 70500}],
+        price=70500)
+    t = MockTrader()
+    bot = _bot(tmp_path, client=client, trader=t)
+    bot.entry_info = _entry_info()
+    bot.last_reset_date = "20260609"
+    bot._check_counter(bot.entry_info.symbol, _dt(13, 0))
+    # MD 슬롯 키 생성 확인
+    assert "20260609_md" in bot.counter_checked
+
+
+def test_counter_slot_pm_slot(tmp_path):
+    """15:00은 PM 슬롯 (그 외)."""
+    client = MockClient(
+        holdings=[{"symbol": "000100", "qty": 100, "avg": 70200, "price": 70500}],
+        price=70500)
+    t = MockTrader()
+    bot = _bot(tmp_path, client=client, trader=t)
+    bot.entry_info = _entry_info()
+    bot.last_reset_date = "20260609"
+    bot._check_counter(bot.entry_info.symbol, _dt(15, 0))
+    # PM 슬롯 키 생성 확인
+    assert "20260609_pm" in bot.counter_checked
+
+
+def test_counter_slot_same_slot_no_recheck(tmp_path):
+    """같은 슬롯에서 2번 호출 → 1번만 체크."""
+    client = MockClient(
+        holdings=[{"symbol": "000100", "qty": 100, "avg": 70200, "price": 70500}],
+        price=70500)
+    t = MockTrader()
+    check_count = [0]
+
+    def fake_counter_exit(df_d, df_w, df_m, cfg):
+        check_count[0] += 1
+        return False, "test"
+
+    bot = _bot(tmp_path, client=client, trader=t)
+    bot.entry_info = _entry_info()
+    bot.last_reset_date = "20260609"
+
+    # 패치
+    import strategy
+    orig = strategy.counter_exit
+    strategy.counter_exit = fake_counter_exit
+
+    try:
+        bot._check_counter(bot.entry_info.symbol, _dt(9, 30))  # AM
+        bot._check_counter(bot.entry_info.symbol, _dt(9, 40))  # AM (같은 슬롯)
+        assert check_count[0] == 1  # 1번만 호출
+    finally:
+        strategy.counter_exit = orig
+
+
+def test_counter_slot_different_slot_recheck(tmp_path):
+    """다른 슬롯에서는 다시 체크."""
+    client = MockClient(
+        holdings=[{"symbol": "000100", "qty": 100, "avg": 70200, "price": 70500}],
+        price=70500)
+    t = MockTrader()
+    check_count = [0]
+
+    def fake_counter_exit(df_d, df_w, df_m, cfg):
+        check_count[0] += 1
+        return False, "test"
+
+    bot = _bot(tmp_path, client=client, trader=t)
+    bot.entry_info = _entry_info()
+    bot.last_reset_date = "20260609"
+
+    # 패치
+    import strategy
+    orig = strategy.counter_exit
+    strategy.counter_exit = fake_counter_exit
+
+    try:
+        bot._check_counter(bot.entry_info.symbol, _dt(9, 30))  # AM
+        bot._check_counter(bot.entry_info.symbol, _dt(13, 0))  # MD
+        assert check_count[0] == 2  # 2번 호출
+    finally:
+        strategy.counter_exit = orig
+
+
+def test_counter_slot_state_roundtrip(tmp_path):
+    """상태 저장/복원 시 counter_checked (set) 직렬화."""
+    bot = _bot(tmp_path)
+    bot.counter_checked = {"20260609_am", "20260609_md"}
+    bot.save_state()
+
+    bot2 = _bot(tmp_path)
+    bot2.load_state()
+    assert bot2.counter_checked == {"20260609_am", "20260609_md"}
+
+
+def test_counter_slot_reset_on_new_day(tmp_path):
+    """날짜 변경 시 counter_checked 초기화."""
+    client = MockClient()
+    bot = _bot(tmp_path, client=client)
+    bot.counter_checked = {"20260609_am"}
+    bot.last_reset_date = "20260609"
+    bot._daily_reset_if_needed(_dt(9, 0, d=10))
+    assert bot.counter_checked == set()

@@ -9,7 +9,7 @@ from config import Config
 
 log = logging.getLogger(__name__)
 
-_LAYER_ORDER = ["L1", "L2", "L3", "L4", "L5", "L6", "L7"]
+_LAYER_ORDER = ["L1", "L2", "L3", "L4", "L5", "L6"]
 
 
 def _esc(s) -> str:
@@ -23,17 +23,14 @@ def _checks(layers: dict) -> str:
 
 def fmt_scan_signal(sig, name, provisional=True) -> str:
     tag = "<i>(장중 잠정)</i>" if provisional else "<b>(마감 확정)</b>"
-    if sig.score >= 7:
-        tier = "🔥FULL"
-        header = "🚨🚨🚨 <b>필수매수</b> 🚨🚨🚨\n"
-    elif sig.score >= 6:
-        tier = f"🌟{sig.score}/7"
+    if sig.score >= 6:
+        tier = f"🌟{sig.score}/6"
         header = ""
     else:
-        tier = f"⭐{sig.score}/7"
+        tier = f"⭐{sig.score}/6"
         header = ""
     return (f"{header}📈 <b>[{_esc(name)}] {_esc(sig.symbol)}</b> 매수신호 {tag}\n"
-            f"등급: {tier} ({sig.score}/7) | 거래량 {sig.rvol:.1f}x\n"
+            f"등급: {tier} ({sig.score}/6) | 거래량 {sig.rvol:.1f}x\n"
             f"현재가: {sig.entry_price:,.0f}원\n"
             f"손절: {sig.sl_price:,.0f}원\n"
             f"{_checks(sig.layers)}")

@@ -113,6 +113,7 @@ def test_full_clean_uptrend_layers():
     assert res.l3 is False
     assert res.l4 is False
     assert res.l6 is False
+    # 6레이어 (L7 제거됨)
     assert res.score == 3
 
 
@@ -123,31 +124,6 @@ def test_full_missing_weekly_fails_l2():
     assert res.l2 is False
 
 
-# ── L7 수급 ────────────────────────────────────────────────
-def test_l7_inst_positive():
-    assert cf.l7_supply(inst_qty=1000, frgn_qty=0) is True
-
-
-def test_l7_frgn_positive():
-    assert cf.l7_supply(inst_qty=0, frgn_qty=500) is True
-
-
-def test_l7_both_zero():
-    assert cf.l7_supply(inst_qty=0, frgn_qty=0) is False
-
-
-def test_l7_net_selling():
-    assert cf.l7_supply(inst_qty=-5000, frgn_qty=-200) is False
-
-
-def test_full_l7_via_params():
-    cfg = Config()
-    res_no  = cf.full(_rising(100), _rising(60), _rising(30), cfg, inst_qty=0, frgn_qty=0)
-    res_yes = cf.full(_rising(100), _rising(60), _rising(30), cfg, inst_qty=1000, frgn_qty=0)
-    assert res_no is not None and res_yes is not None
-    assert res_yes.l7 is True
-    assert res_no.l7  is False
-    assert res_yes.score == res_no.score + 1
 
 
 def test_full_result_fields():
@@ -155,4 +131,4 @@ def test_full_result_fields():
     res = cf.full(_rising(100), _rising(60), _rising(30), cfg)
     assert res.price == pytest.approx(199.0)
     assert res.atr > 0
-    assert 0 <= res.score <= 7
+    assert 0 <= res.score <= 6

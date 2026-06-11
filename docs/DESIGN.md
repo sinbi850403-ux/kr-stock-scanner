@@ -2,7 +2,7 @@
 
 > **Doc-First 문서** — 이 설계가 확정된 후에야 코드 작성을 시작합니다.
 > 기준 스펙(SOURCE OF TRUTH): [`docs/reference/confluence_pro_v5.pine`](reference/confluence_pro_v5.pine)
-> 작성: 2026-06-09 / 상태: **확정·구현 완료** (12개 모듈 / pytest 190 통과 / 커버리지 96%)
+> 작성: 2026-06-09 / 최종 업데이트: 2026-06-11 / 상태: **확정·구현 완료** (15개 모듈 / pytest 252 통과 / 커버리지 96%+)
 
 ---
 
@@ -64,6 +64,55 @@
 | `main.py` | 상태머신 메인 루프 + 재시작 복구 | 조립 |
 
 순수 모듈(7개)은 외부 의존 없이 단위테스트 100% 목표. I/O 모듈은 KIS 응답 mock으로 검증.
+
+---
+
+## 2.5 2026-06-11 업데이트 — L7 제거 & 신규 기능
+
+### L7(기관/외국인) 계층 제거 (6레이어 → 6레이어)
+- **사유**: 당일 순매수 부호만으로는 수급 판단 신뢰도 낮음 (매매 시기 불명확).
+- **변경**: 총 점수 7점 → 6점 (threshold 기본값 5 유지 = 5/6 의미).
+- **영향**: config.py `_TR_MAP`의 "investor" 항목, kis_client.py `get_investor_flow()` 제거.
+- **테스트**: test_confluence.py L7 관련 12개 → 0개 (전부 삭제), test_notify.py "5/7" → "5/6" 변경.
+
+### 역신호(Counter Exit) 체크 3회/일 (1회 → 3회)
+- **기존**: 날짜 기반 (일 1회만 체크).
+- **신규**: 슬롯 방식 → AM/MD/PM 3회 독립 체크.
+  - AM: hhmm < "1200"
+  - MD: "1200" <= hhmm < "1400"  
+  - PM: 그 외
+- **상태 직렬화**: `counter_checked` set → list → set 라운드트립.
+- **테스트**: test_main.py 7개 신규 슬롯 테스트 추가.
+
+### 신호 전수 기록 (Forward-Test 표본)
+- **신규 모듈**: `siglog.py` (log_signal 함수).
+- **출력**: 
+  - JSONL append (signals_log.jsonl) — 파일 쓰기 실패 무시.
+  - logging "SIGLOG {json}" — Railway 로그에 영속.
+- **필드**: ts, date, phase, symbol, name, score, layers, entry, sl, ext_pct.
+- **호출**: main.py 3곳 (_intraday_alert_scan, _post_close_scan, _evening_scan) 알림 후.
+- **테스트**: test_siglog.py 9개 테스트 (파일 쓰기, encoding, logging, 필드).
+
+### 백테스트 모듈 (로컬 검증)
+- **신규 파일**: `backtest.py` (CLI & API).
+- **데이터**: pykrx 일봉 3년 (지연 임포트 — 메인 무영향).
+- **시뮬**: 워크포워드 + 룩어헤드 금지.
+  - 진입: 다음날 시가.
+  - SL: ATR 기반, TP: R배율.
+  - 역신호: EMA 역배열 청산.
+  - 비용: 매도 0.18%(세금) + 0.03%(수수료).
+- **출력**: CSV (backtest_trades.csv) + 콘솔 요약.
+- **문서**: `docs/BACKTEST.md` (사용법 & 가정).
+- **테스트**: test_backtest.py 12개 (합성 데이터, 진입/청산, 상태).
+
+### Go-Live 기준 문서
+- **신규 파일**: `docs/GOLIVE.md`.
+- **체크리스트**: 7개 항목 (모의 30거래, 승률≥50%, 평균R≥0.5, MDD≤5%, 킬스위치무, 안정성, 주문속도).
+- **전환 절차**: 2단계 환경변수 + 모니터링.
+
+### 의존성
+- **메인 (requirements.txt)**: 변경 없음.
+- **개발용 (requirements-dev.txt)**: `pykrx>=0.3.8` 추가.
 
 ---
 

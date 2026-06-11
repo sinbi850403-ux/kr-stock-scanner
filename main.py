@@ -22,6 +22,7 @@ import pytz
 import gates
 import strategy
 import api_server
+import siglog
 from config import Config
 from kis_client import KISClient
 from scanner import Scanner
@@ -55,7 +56,7 @@ class TradingBot:
         self.kill_switch = False
         self.start_balance = 0.0
         self.last_reset_date = None
-        self.counter_checked = None
+        self.counter_checked = set()        # {f"{date}_{slot}"} — 슬롯별 1회 체크
 
     # ── 상태 영속화 ──
     def save_state(self):
@@ -68,6 +69,7 @@ class TradingBot:
             "start_balance": self.start_balance,
             "last_reset_date": self.last_reset_date,
             "alerted": list(self.alerted),
+            "counter_checked": list(self.counter_checked),
         }
         try:
             with open(self.state_path, "w", encoding="utf-8") as f:
@@ -92,6 +94,7 @@ class TradingBot:
         self.start_balance = s.get("start_balance", 0.0)
         self.last_reset_date = s.get("last_reset_date")
         self.alerted = set(s.get("alerted", []))
+        self.counter_checked = set(s.get("counter_checked", []))
 
     # ── 재시작 복구 ──
     def startup_recovery(self):
@@ -126,7 +129,7 @@ class TradingBot:
         self.pending_signals = []
         self.daily_log = []
         self.alerted = set()
-        self.counter_checked = None
+        self.counter_checked = set()
         self.kill_switch = False
         try:
             self.start_balance = self.client.get_balance()[0]
@@ -176,11 +179,23 @@ class TradingBot:
         self.save_state()
 
     # ── 포지션 감시 ──
+    def _get_counter_slot(self, now):
+        """시간대별 슬롯: AM (<12:00), MD (12:00~13:59), PM (그 외)."""
+        hhmm = now.strftime("%H%M")
+        if hhmm < "1200":
+            return "am"
+        elif hhmm < "1400":
+            return "md"
+        else:
+            return "pm"
+
     def _check_counter(self, symbol, now):
         ds = now.strftime("%Y%m%d")
-        if self.counter_checked == ds:
+        slot = self._get_counter_slot(now)
+        key = f"{ds}_{slot}"
+        if key in self.counter_checked:
             return False, ""
-        self.counter_checked = ds
+        self.counter_checked.add(key)
         df_d = self.client.get_candles(symbol, "D", self.cfg.daily_count)
         df_w = self.client.get_candles(symbol, "W", self.cfg.weekly_count)
         df_m = self.client.get_candles(symbol, "M", self.cfg.monthly_count)
@@ -241,6 +256,7 @@ class TradingBot:
             if key not in self.alerted:
                 self.notifier.alert_scan_signal(sig, name, provisional=False)
                 self.alerted.add(key)
+                siglog.log_signal(sig, name, "postclose", now)
 
     def _evening_scan(self, now):
         """17시 추가 스캔 — 새 종목만 pending 병합 + 알림. 하루 1회."""
@@ -255,6 +271,7 @@ class TradingBot:
             if key not in self.alerted:
                 self.notifier.alert_scan_signal(sig, name, provisional=False)
                 self.alerted.add(key)
+                siglog.log_signal(sig, name, "evening", now)
             if sig.symbol not in existing_syms:
                 self.pending_signals.append((name, sig))
                 existing_syms.add(sig.symbol)
@@ -265,6 +282,7 @@ class TradingBot:
             if key not in self.alerted:
                 self.notifier.alert_scan_signal(sig, name, provisional=True)
                 self.alerted.add(key)
+                siglog.log_signal(sig, name, "intraday", now)
 
     # ── 청산 후처리 ──
     def _on_close(self, pnl, now):
@@ -292,7 +310,7 @@ def main():
     bot = build_bot(cfg)
     mode = "모의투자" if cfg.is_paper else "⚠️실전"
     bot.notifier.send(f"🤖 국내주식 컨플루언스 자동매매 ON [{mode}]\n"
-                      f"기준 {cfg.threshold}/7 | 리스크 {cfg.risk_pct*100:.0f}% | "
+                      f"기준 {cfg.threshold}/6 | 리스크 {cfg.risk_pct*100:.0f}% | "
                       f"포지션 최대 {cfg.max_positions}")
     api_server.register_bot(bot)
     api_server.start()
