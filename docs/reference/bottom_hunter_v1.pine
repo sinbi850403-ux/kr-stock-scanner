@@ -14,6 +14,8 @@
 //
 // 손절: 스윕 저점 - ATR×0.5 (명확한 무효화 지점)
 // 목표: TP1 = max(EMA20, 1R) / TP2 = 2R
+// v1.1: 신호 후 진입/손절/TP1/TP2 라인 표시 (SL터치·TP2도달·60봉 경과 시 소멸),
+//       신호 라벨 크게 (입력으로 보통/크게 선택)
 //
 // ⚠ 주의: 관리종목/거래정지/투자경고 여부는 Pine에서 조회 불가 —
 //         신호 종목은 반드시 HTS에서 종목 상태 확인 후 진입할 것.
@@ -32,6 +34,8 @@ slAtrMult    = input.float(0.5, "손절 여유 (스윕저점 - ATR×n)", step=0.
 gapThreshPct = input.float(3.0, "갭 차단 임계 % (위아래 공통)", step=0.5)
 cooldown     = input.int(5, "신호 쿨다운 봉수", minval=0)
 showDiv      = input.bool(true, "다이버전스 라인 표시")
+trackBars    = input.int(60, "신호 후 TP/SL 라인 유지 봉수", minval=10)
+labelSizeOpt = input.string("크게", "신호 라벨 크기", options=["보통", "크게"])
 
 // ═══════════════════════════════════════════════════════════════
 // §2. 지표
@@ -143,14 +147,37 @@ risk  = close - slPx
 tp1Px = math.max(ema20, close + risk * 1.0)
 tp2Px = close + risk * 2.0       // 2R
 
+// 신호 후 TP/SL 라인 트래킹 — 손절 터치 / 목표2 도달 / 유지 봉수 경과 시 소멸
+var float actEntry = na
+var float actSL    = na
+var float actTP1   = na
+var float actTP2   = na
+var int   actBar   = na
+
+sigLblSize = labelSizeOpt == "크게" ? size.large : size.normal
+
 if signal
     lastSigBar := bar_index
+    actEntry   := close
+    actSL      := slPx
+    actTP1     := tp1Px
+    actTP2     := tp2Px
+    actBar     := bar_index
     txt = "🎯 바닥신호 " + str.tostring(score) + "/5" +
           "\n진입 " + str.tostring(close, format.mintick) +
           "\n손절 " + str.tostring(slPx, format.mintick) + " (-" + str.tostring(risk / close * 100, "#.#") + "%)" +
           "\n목표1 " + str.tostring(tp1Px, format.mintick) + " (EMA20)" +
           "\n목표2 " + str.tostring(tp2Px, format.mintick) + " (2R)"
-    label.new(bar_index, low, txt, style=label.style_label_up, color=color.new(color.green, 10), textcolor=color.white, size=size.small)
+    label.new(bar_index, low, txt, style=label.style_label_up, color=color.new(color.green, 10), textcolor=color.white, size=sigLblSize)
+
+// 라인 소멸 판정 (신호 봉 다음 봉부터)
+if not na(actBar) and bar_index > actBar and barstate.isconfirmed
+    if low <= actSL or high >= actTP2 or (bar_index - actBar) > trackBars
+        actEntry := na
+        actSL    := na
+        actTP1   := na
+        actTP2   := na
+        actBar   := na
 
 // ═══════════════════════════════════════════════════════════════
 // §7. 시각화
@@ -158,6 +185,12 @@ if signal
 plot(ema20, "EMA20", color=color.orange, linewidth=1)
 plot(ema60, "EMA60", color=color.fuchsia, linewidth=2)
 plot(bbL,   "BB 하단", color=color.new(color.gray, 50), linewidth=1)
+
+// 신호 후 진입/손절/목표 라인
+plot(actEntry, "진입가",  color=color.new(color.blue, 0),   style=plot.style_linebr, linewidth=1)
+plot(actSL,    "손절(SL)", color=color.new(color.red, 0),    style=plot.style_linebr, linewidth=2)
+plot(actTP1,   "목표1(1R/EMA20)", color=color.new(color.green, 40), style=plot.style_linebr, linewidth=1)
+plot(actTP2,   "목표2(2R)", color=color.new(color.green, 0),  style=plot.style_linebr, linewidth=2)
 
 plotshape(signal,   title="바닥신호", style=shape.labelup,  location=location.belowbar, color=color.new(color.green, 0),  text="바닥", textcolor=color.white, size=size.small)
 plotshape(nearSig,  title="임박",     style=shape.diamond,  location=location.belowbar, color=color.new(color.yellow, 10), text="🔥",   textcolor=color.white, size=size.tiny)
