@@ -105,7 +105,7 @@ class Config:
     price_limit_pct: float = 30.0   # KR 일일 가격제한(상/하한가) ±30%
 
     # ── 관리 API ──
-    admin_token: str = ""    # ADMIN_KEY 환경변수 — force-buy 엔드포인트 인증
+    admin_token: str = ""    # BOT_CMD_CODE 환경변수 — force-buy 엔드포인트 인증
 
     # ── 안전 ──
     max_positions: int = 1
@@ -157,7 +157,7 @@ class Config:
             return int(v) if v not in (None, "") else default
 
         c = cls(
-            admin_token=g("ADMIN_KEY", ""),
+            admin_token=g("BOT_CMD_CODE", ""),
             app_key=g("KIS_APP_KEY", ""),
             app_secret=g("KIS_APP_SECRET", ""),
             cano=cano,
