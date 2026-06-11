@@ -530,8 +530,8 @@ hdrBg      = overExt and activeScore >= confReq ? color.new(color.red,15) :
 var table dash = table.new(position.top_left, 2, 16, border_width=1, bgcolor=color.white, border_color=color.rgb(205, 205, 205))
 
 if barstate.islast
-    table.cell(dash, 0, 0, "컨플루언스 PRO v3",                       text_color=cText, text_size=size.small, bgcolor=hdrBg)
-    table.cell(dash, 1, 0, str.tostring(activeScore) + "/6 " + convTier, text_color=cText, text_size=size.small, bgcolor=hdrBg)
+    table.cell(dash, 0, 0, "컨플루언스 PRO v3",                       text_color=color.white, text_size=size.small, bgcolor=hdrBg)
+    table.cell(dash, 1, 0, str.tostring(activeScore) + "/6 " + convTier, text_color=color.white, text_size=size.small, bgcolor=hdrBg)
 
     table.cell(dash, 0, 1, "MODE", text_color=cBlue, text_size=size.small)
     table.cell(dash, 1, 1, mode,   text_color=cText,  text_size=size.small)
