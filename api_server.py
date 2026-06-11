@@ -4,7 +4,7 @@
 엔드포인트:
   GET  /health      — 봇 상태 확인
   POST /force-buy   — 강제 1주 매수 (테스트/긴급 진입용)
-    헤더: X-Auth-Token: <ADMIN_TOKEN>
+    헤더: X-Auth-Token: <ADMIN_KEY>
     바디: {"symbol": "005930", "qty": 1}
 """
 import logging
@@ -28,7 +28,7 @@ def _check_token():
     token = request.headers.get("X-Auth-Token", "")
     admin = (_bot_ref.cfg.admin_token if _bot_ref else "") or ""
     if not admin:
-        return False, "ADMIN_TOKEN 미설정"
+        return False, "ADMIN_KEY 미설정"
     if token != admin:
         return False, "토큰 불일치"
     return True, ""
