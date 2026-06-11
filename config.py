@@ -104,6 +104,9 @@ class Config:
     limit_veto_pct: float = 27.0
     price_limit_pct: float = 30.0   # KR 일일 가격제한(상/하한가) ±30%
 
+    # ── 관리 API ──
+    admin_token: str = ""    # ADMIN_TOKEN 환경변수 — force-buy 엔드포인트 인증
+
     # ── 안전 ──
     max_positions: int = 1
     max_daily_trades: int = 3
@@ -154,6 +157,7 @@ class Config:
             return int(v) if v not in (None, "") else default
 
         c = cls(
+            admin_token=g("ADMIN_TOKEN", ""),
             app_key=g("KIS_APP_KEY", ""),
             app_secret=g("KIS_APP_SECRET", ""),
             cano=cano,

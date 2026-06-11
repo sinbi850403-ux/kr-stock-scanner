@@ -3,5 +3,6 @@ pandas
 numpy
 pytz
 python-dotenv
+flask
 pytest
 pytest-cov

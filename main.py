@@ -21,6 +21,7 @@ import pytz
 
 import gates
 import strategy
+import api_server
 from config import Config
 from kis_client import KISClient
 from scanner import Scanner
@@ -272,6 +273,8 @@ def main():
     bot.notifier.send(f"🤖 국내주식 컨플루언스 자동매매 ON [{mode}]\n"
                       f"기준 {cfg.threshold}/7 | 리스크 {cfg.risk_pct*100:.0f}% | "
                       f"포지션 최대 {cfg.max_positions}")
+    api_server.register_bot(bot)
+    api_server.start()
     bot.startup_recovery()
     while True:
         try:
