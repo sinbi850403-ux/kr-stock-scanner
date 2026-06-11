@@ -117,7 +117,7 @@ atrMed = ta.sma(atr, 20)
 // ADX 추세강도
 [diPlus, diMinus, adxVal] = ta.dmi(14, 14)
 adxTrendStr = adxVal >= 30 ? "강▲" : adxVal >= 20 ? "보통" : "약(횡보)"
-adxColor    = adxVal >= 30 ? color.lime : adxVal >= 20 ? color.yellow : color.gray
+adxColor    = adxVal >= 30 ? color.rgb(0, 140, 60) : adxVal >= 20 ? color.rgb(205, 125, 0) : color.rgb(165, 165, 165)
 
 volAvg    = ta.sma(volume, 20)
 rvol      = volAvg > 0 ? volume / volAvg : 0.0
@@ -510,67 +510,77 @@ l6st = f_st(L6_buy, "BOS 미확인")
 supplySt = (supplyOK ? "↑ " : "↓ ") + "CMF " + str.tostring(cmf, "#.##") + "  MFI " + str.tostring(mfi, "#")
 extSt    = (overExt ? "⛔ " : "") + (extPct >= 0 ? "+" : "") + str.tostring(extPct, "#.#") + "% / 한도 " + (extMaxPct > 0 ? str.tostring(extMaxPct, "#") + "%" : "꺼짐")
 
-scoreColor = activeScore >= 6 ? color.lime : activeScore >= confReq ? color.aqua : activeScore == confReq - 1 ? color.yellow : color.gray
+// [v3.2] 화이트 대시보드 팔레트
+cText  = color.rgb(20, 20, 20)      // 기본 글자
+cSub   = color.rgb(110, 110, 110)   // 보조 라벨
+cPass  = color.rgb(0, 140, 60)      // 통과 (진녹)
+cFail  = color.rgb(165, 165, 165)   // 미통과 (회색)
+cWarn  = color.rgb(205, 125, 0)     // 경고 (진주황)
+cBlue  = color.rgb(25, 85, 195)     // 강조 (진파랑)
+cKeyBg = color.rgb(228, 235, 248)   // 키 행 연남색 배경
+cKeyTx = color.rgb(35, 60, 130)     // 키 행 라벨
+
+scoreColor = activeScore >= 6 ? cPass : activeScore >= confReq ? cBlue : activeScore == confReq - 1 ? cWarn : cFail
 hdrBg      = overExt and activeScore >= confReq ? color.new(color.red,15) :
              activeScore >= 6 ? color.new(color.green,15) :
              activeScore >= confReq ? color.new(color.blue,15) :
              activeScore == confReq - 1 ? color.new(color.orange,15) : color.new(color.gray,15)
 
-// [v3.1] 배경 완전 불투명 — 차트 요소 비침 방지
-var table dash = table.new(position.top_left, 2, 16, border_width=1, bgcolor=color.rgb(12, 16, 22), border_color=color.new(color.gray, 70))
+// [v3.2] 화이트 배경 완전 불투명 — 차트 요소 비침 방지
+var table dash = table.new(position.top_left, 2, 16, border_width=1, bgcolor=color.white, border_color=color.rgb(205, 205, 205))
 
 if barstate.islast
-    table.cell(dash, 0, 0, "컨플루언스 PRO v3",                       text_color=color.yellow, text_size=size.small, bgcolor=hdrBg)
-    table.cell(dash, 1, 0, str.tostring(activeScore) + "/6 " + convTier, text_color=scoreColor,  text_size=size.small, bgcolor=hdrBg)
+    table.cell(dash, 0, 0, "컨플루언스 PRO v3",                       text_color=cText, text_size=size.small, bgcolor=hdrBg)
+    table.cell(dash, 1, 0, str.tostring(activeScore) + "/6 " + convTier, text_color=cText, text_size=size.small, bgcolor=hdrBg)
 
-    table.cell(dash, 0, 1, "MODE", text_color=color.yellow, text_size=size.small)
-    table.cell(dash, 1, 1, mode,   text_color=color.white,  text_size=size.small)
+    table.cell(dash, 0, 1, "MODE", text_color=cBlue, text_size=size.small)
+    table.cell(dash, 1, 1, mode,   text_color=cText,  text_size=size.small)
 
     tfDots = (bull1B ? "🟢" : bear1B ? "🔴" : "⚪") + " " + (bull2B ? "🟢" : bear2B ? "🔴" : "⚪") + " " + (bull3B ? "🟢" : bear3B ? "🔴" : "⚪")
-    table.cell(dash, 0, 2, "TF(" + tf1 + "/" + tf2 + "/" + tf3 + ")", text_color=color.silver, text_size=size.small)
+    table.cell(dash, 0, 2, "TF(" + tf1 + "/" + tf2 + "/" + tf3 + ")", text_color=cSub, text_size=size.small)
     table.cell(dash, 1, 2, tfDots, text_size=size.small)
 
-    table.cell(dash, 0, 3, "ADX", text_color=color.silver, text_size=size.small)
+    table.cell(dash, 0, 3, "ADX", text_color=cSub, text_size=size.small)
     table.cell(dash, 1, 3, str.tostring(adxVal, "#.0") + "  " + adxTrendStr, text_color=adxColor, text_size=size.small)
 
-    table.cell(dash, 0, 4, "L1  3EMA 정배열",    text_color=color.white,  text_size=size.small)
-    table.cell(dash, 1, 4, l1st,                 text_color=L1_buy ? color.lime : color.gray, text_size=size.small)
+    table.cell(dash, 0, 4, "L1  3EMA 정배열",    text_color=cText,  text_size=size.small)
+    table.cell(dash, 1, 4, l1st,                 text_color=L1_buy ? cPass : cFail, text_size=size.small)
 
-    table.cell(dash, 0, 5, "L2  MTF 정렬",       text_color=color.white,  text_size=size.small)
-    table.cell(dash, 1, 5, l2st,                 text_color=L2_buy ? color.lime : color.gray, text_size=size.small)
+    table.cell(dash, 0, 5, "L2  MTF 정렬",       text_color=cText,  text_size=size.small)
+    table.cell(dash, 1, 5, l2st,                 text_color=L2_buy ? cPass : cFail, text_size=size.small)
 
-    table.cell(dash, 0, 6, "L3  황금구간/OB",    text_color=color.white,  text_size=size.small)
-    table.cell(dash, 1, 6, l3st,                 text_color=L3_buy ? color.lime : color.gray, text_size=size.small)
+    table.cell(dash, 0, 6, "L3  황금구간/OB",    text_color=cText,  text_size=size.small)
+    table.cell(dash, 1, 6, l3st,                 text_color=L3_buy ? cPass : cFail, text_size=size.small)
 
-    table.cell(dash, 0, 7, "🔑 L4  모멘텀",      text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy,20))
-    table.cell(dash, 1, 7, l4st,                 text_color=L4_buy ? color.lime : color.orange, text_size=size.small, bgcolor=color.new(color.navy,20))
+    table.cell(dash, 0, 7, "🔑 L4  모멘텀",      text_color=cKeyTx, text_size=size.small, bgcolor=cKeyBg)
+    table.cell(dash, 1, 7, l4st,                 text_color=L4_buy ? cPass : cWarn, text_size=size.small, bgcolor=cKeyBg)
 
-    table.cell(dash, 0, 8, "🔑 L5  거래량/VWAP", text_color=color.yellow, text_size=size.small, bgcolor=color.new(color.navy,20))
-    table.cell(dash, 1, 8, l5st,                 text_color=L5_buy ? color.lime : color.orange, text_size=size.small, bgcolor=color.new(color.navy,20))
+    table.cell(dash, 0, 8, "🔑 L5  거래량/VWAP", text_color=cKeyTx, text_size=size.small, bgcolor=cKeyBg)
+    table.cell(dash, 1, 8, l5st,                 text_color=L5_buy ? cPass : cWarn, text_size=size.small, bgcolor=cKeyBg)
 
-    table.cell(dash, 0, 9,  "L6  BOS/CHoCH",    text_color=color.white,  text_size=size.small)
-    table.cell(dash, 1, 9,  l6st,               text_color=L6_buy ? color.lime : color.gray, text_size=size.small)
+    table.cell(dash, 0, 9,  "L6  BOS/CHoCH",    text_color=cText,  text_size=size.small)
+    table.cell(dash, 1, 9,  l6st,               text_color=L6_buy ? cPass : cFail, text_size=size.small)
 
-    table.cell(dash, 0, 10, "수급(참고)",        text_color=color.silver, text_size=size.small)
-    table.cell(dash, 1, 10, supplySt,           text_color=supplyOK ? color.lime : color.gray, text_size=size.small)
+    table.cell(dash, 0, 10, "수급(참고)",        text_color=cSub, text_size=size.small)
+    table.cell(dash, 1, 10, supplySt,           text_color=supplyOK ? cPass : cFail, text_size=size.small)
 
-    table.cell(dash, 0, 11, "이격(EMA" + str.tostring(emaMidLen) + ")", text_color=color.silver, text_size=size.small)
-    table.cell(dash, 1, 11, extSt,              text_color=overExt ? color.red : color.silver, text_size=size.small)
+    table.cell(dash, 0, 11, "이격(EMA" + str.tostring(emaMidLen) + ")", text_color=cSub, text_size=size.small)
+    table.cell(dash, 1, 11, extSt,              text_color=overExt ? color.red : cSub, text_size=size.small)
 
     table.cell(dash, 0, 12, f_bar(activeScore, 6), text_color=scoreColor, text_size=size.small)
     table.cell(dash, 1, 12, str.tostring(activeScore) + "/6  " + convTier, text_color=scoreColor, text_size=size.small)
 
-    table.cell(dash, 0, 13, "포지션",            text_color=color.aqua, text_size=size.small)
-    table.cell(dash, 1, 13, inPos ? "보유" : "관망", text_color=inPos ? color.lime : color.silver, text_size=size.small)
+    table.cell(dash, 0, 13, "포지션",            text_color=cBlue, text_size=size.small)
+    table.cell(dash, 1, 13, inPos ? "보유" : "관망", text_color=inPos ? cPass : cSub, text_size=size.small)
 
     curR = inPos and not na(initRisk) and initRisk != 0 ? str.tostring((close - entry) / initRisk, "0.00") + "R" : "-"
-    table.cell(dash, 0, 14, "현재 R / 스탑",      text_color=color.aqua, text_size=size.small)
-    table.cell(dash, 1, 14, curR + "  " + (inPos ? stopTypeStr : "-"), text_color=color.white, text_size=size.small)
+    table.cell(dash, 0, 14, "현재 R / 스탑",      text_color=cBlue, text_size=size.small)
+    table.cell(dash, 1, 14, curR + "  " + (inPos ? stopTypeStr : "-"), text_color=cText, text_size=size.small)
 
     viPct  = (movePct >= 0 ? "+" : "") + str.tostring(movePct, "#.#") + "%"
     viText = (nearLimitUp or staticVIzone) ? "⚠ 위험  " + viPct : "정상"
-    table.cell(dash, 0, 15, "한도/VI",            text_color=color.aqua, text_size=size.small)
-    table.cell(dash, 1, 15, viText,               text_color=(nearLimitUp or staticVIzone) ? color.red : color.lime, text_size=size.small)
+    table.cell(dash, 0, 15, "한도/VI",            text_color=cBlue, text_size=size.small)
+    table.cell(dash, 1, 15, viText,               text_color=(nearLimitUp or staticVIzone) ? color.red : cPass, text_size=size.small)
 
 // ═══════════════════════════════════════════════════════════════
 // §9. 알림
