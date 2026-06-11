@@ -267,3 +267,17 @@ def test_fluctuation_rank_parses(monkeypatch):
     monkeypatch.setattr(cli, "_get", lambda *a, **k: {
         "output": [{"stck_shrn_iscd": "000660", "hts_kor_isnm": "SK하이닉스"}]})
     assert cli.fluctuation_rank() == [("000660", "SK하이닉스")]
+
+
+def test_market_cap_rank_parses(monkeypatch):
+    cli = kc.KISClient(_cfg())
+    captured = {}
+
+    def fake_get(path, tr_id, params, **k):
+        captured["path"] = path
+        captured["tr_id"] = tr_id
+        return {"output": [{"mksc_shrn_iscd": "005380", "hts_kor_isnm": "현대차"}]}
+    monkeypatch.setattr(cli, "_get", fake_get)
+    assert cli.market_cap_rank() == [("005380", "현대차")]
+    assert captured["tr_id"] == "FHPST01740000"
+    assert "market-cap" in captured["path"]

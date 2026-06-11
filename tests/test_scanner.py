@@ -41,6 +41,9 @@ class FakeClient:
     def fluctuation_rank(self, market="0000"):
         return self._ranks.get(("flx",), [])
 
+    def market_cap_rank(self, market="0000"):
+        return self._ranks.get(("cap",), [])
+
     def get_candles(self, code, period="D", count=100):
         self.candle_calls.append((code, period))
         return self._df if self._df is not None else make_df([100.0] * 100)
@@ -58,6 +61,32 @@ def test_build_candidates_dedup_and_filter():
     sc = scanner.Scanner(Config(), FakeClient(ranks))
     cand = sc.build_candidates()
     assert set(cand.keys()) == {"000100", "000200", "000300"}    # 우선주·ETF 제외, 중복 제거
+
+
+def test_build_candidates_includes_market_cap_source():
+    """시가총액 상위 소스 — 횡보/눌림목 우량주도 후보에 포함."""
+    ranks = {
+        ("vol", "1"): [("000100", "에이")],
+        ("cap",): [("005380", "현대차"), ("069500", "KODEX 200")],
+    }
+    sc = scanner.Scanner(Config(), FakeClient(ranks))
+    cand = sc.build_candidates()
+    assert "005380" in cand                                      # 시총 소스 반영
+    assert "069500" not in cand                                  # ETF 제외 유지
+
+
+def test_build_candidates_partial_source_failure():
+    """소스 하나가 실패해도 나머지 소스 후보는 유지."""
+    class PartialClient(FakeClient):
+        def fluctuation_rank(self, market="0000"):
+            raise RuntimeError("api down")
+    ranks = {
+        ("vol", "1"): [("000100", "에이")],
+        ("cap",): [("005380", "현대차")],
+    }
+    sc = scanner.Scanner(Config(), PartialClient(ranks))
+    cand = sc.build_candidates()
+    assert set(cand.keys()) == {"000100", "005380"}              # 실패 소스만 누락
 
 
 # ── 스캔 ────────────────────────────────────────────────

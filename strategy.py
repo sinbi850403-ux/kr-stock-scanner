@@ -1,7 +1,8 @@
 """
 신호 생성 (순수) — 컨플루언스 → Signal, 역신호 청산 판정.
 
-진입: score >= cfg.threshold 이고 유효 손절(sl<entry)일 때만 Signal.
+진입: score >= cfg.threshold AND 유효 손절(sl<entry) AND 과열 아님
+      (과열 = 종가가 EMA20 대비 max_ext_pct% 초과 이격 — 이미 분출한 종목 추격 차단).
 청산(역신호): bearCHoCH / EMA 역배열 / 주봉 추세 이탈.
 """
 from dataclasses import dataclass, field
@@ -35,6 +36,9 @@ def generate_signal(symbol, df_d, df_w, df_m, cfg: Config,
                     frgn_qty: float = 0.0) -> Optional[Signal]:
     res = cf.full(df_d, df_w, df_m, cfg, inst_qty, frgn_qty)
     if res is None or res.score < cfg.threshold:
+        return None
+
+    if res.ext_pct > cfg.max_ext_pct:   # 과열 — 추격 진입 차단
         return None
 
     sl = risk.compute_stop(res.price, res.atr, cfg,

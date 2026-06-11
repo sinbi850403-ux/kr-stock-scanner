@@ -34,6 +34,7 @@ class ConfluenceResult:
     bear_choch: bool
     ob_bot: Optional[float]
     state: st.StructureState
+    ext_pct: float = 0.0     # 종가의 EMA20 대비 이격률(%) — 과열 판정용
 
 
 # ── 레이어 순수 헬퍼 ────────────────────────────────────
@@ -147,6 +148,10 @@ def full(df_d, df_w, df_m, cfg: Config,
     L7 = l7_supply(inst_qty, frgn_qty)
 
     score = int(L1) + int(L2) + int(L3) + int(L4) + int(L5) + int(L6) + int(L7)
+
+    e20_now = _f(e20.iloc[-1])
+    ext_pct = (price - e20_now) / e20_now * 100.0 if e20_now > 0 else 0.0
+
     return ConfluenceResult(score, L1, L2, L3, L4, L5, L6, L7,
                             price, cur_atr, cur_rvol, state.bear_choch,
-                            state.ob_bot, state)
+                            state.ob_bot, state, ext_pct=ext_pct)

@@ -35,17 +35,21 @@ class Scanner:
         self._htf_cache = {}      # {(code, period): (datestr, df)}
 
     def build_candidates(self) -> dict:
+        """4소스 통합 — 소스 하나가 실패해도 나머지는 유지."""
         cand = {}
-        try:
-            sources = (self.client.volume_rank("1"),    # 거래증가율
-                       self.client.volume_rank("3"),    # 거래대금
-                       self.client.fluctuation_rank())  # 상승률
-            for rows in sources:
-                for code, name in rows:
+        sources = (
+            ("거래증가율", lambda: self.client.volume_rank("1")),
+            ("거래대금", lambda: self.client.volume_rank("3")),
+            ("상승률", lambda: self.client.fluctuation_rank()),
+            ("시가총액", lambda: self.client.market_cap_rank()),  # 횡보/눌림목 우량주 입구
+        )
+        for label, fetch in sources:
+            try:
+                for code, name in fetch():
                     if is_tradable(code, name):
                         cand[code] = name
-        except Exception as e:                          # noqa: BLE001
-            log.error("깔때기 후보 생성 오류: %s", e)
+            except Exception as e:                      # noqa: BLE001
+                log.error("깔때기 소스 오류 (%s): %s", label, e)
         return cand
 
     def _cached_htf(self, code, period, count, datestr):

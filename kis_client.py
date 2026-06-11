@@ -293,6 +293,18 @@ class KISClient:
                       self.cfg.tr_id("flx_rank"), params)
         return self._rank_rows(j)
 
+    def market_cap_rank(self, market="0000"):
+        """시가총액 상위 — 횡보/눌림목 우량주 입구 (랭킹 분출과 무관한 고정 유니버스 성격)."""
+        params = {
+            "fid_cond_mrkt_div_code": "J", "fid_cond_scr_div_code": "20174",
+            "fid_input_iscd": market, "fid_div_cls_code": "0",
+            "fid_trgt_cls_code": "0", "fid_trgt_exls_cls_code": "0",
+            "fid_input_price_1": "", "fid_input_price_2": "", "fid_vol_cnt": "",
+        }
+        j = self._get("/uapi/domestic-stock/v1/ranking/market-cap",
+                      self.cfg.tr_id("cap_rank"), params)
+        return self._rank_rows(j)
+
     @staticmethod
     def _rank_rows(j):
         out = []

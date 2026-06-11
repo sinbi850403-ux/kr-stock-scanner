@@ -38,6 +38,23 @@ def test_signal_generated_when_score_met():
     assert sig.score == 3
 
 
+def test_signal_vetoed_when_overextended():
+    """종가가 EMA20 대비 +12% 초과 이격 — 이미 분출한 종목 추격 차단."""
+    cfg = Config(threshold=3)
+    closes = [100.0 + i for i in range(99)] + [258.0]   # 마지막 봉 +30% 분출
+    df = make_df(closes)
+    assert strategy.generate_signal("005930", df, _rising(60),
+                                    _rising(30), cfg, prev_close=198.0) is None
+
+
+def test_signal_allowed_when_ext_within_limit():
+    """완만한 상승(이격 12% 이내)은 신호 유지."""
+    cfg = Config(threshold=3)
+    sig = strategy.generate_signal("005930", _rising(100), _rising(60),
+                                   _rising(30), cfg, prev_close=197.0)
+    assert sig is not None
+
+
 # ── 일봉 방향 ───────────────────────────────────────────
 def test_daily_direction_up():
     assert strategy.daily_direction(_rising(100), Config()) == 1

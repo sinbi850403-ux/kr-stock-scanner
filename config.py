@@ -26,6 +26,7 @@ _TR_MAP = {
     "price":    ("FHKST01010100", "FHKST01010100"),
     "vol_rank": ("FHPST01710000", "FHPST01710000"),
     "flx_rank": ("FHPST01700000", "FHPST01700000"),
+    "cap_rank": ("FHPST01740000", "FHPST01740000"),  # 시가총액 상위 (모의/실전 동일)
     "investor": ("FHKST01010900", "FHKST01010900"),  # 투자자별 매매동향 (모의/실전 동일)
 }
 
@@ -97,6 +98,7 @@ class Config:
     be_trig_r: float = 1.0
 
     # ── 게이트 ──
+    max_ext_pct: float = 12.0       # 과열 필터: 종가가 EMA20 대비 +N% 초과 이격 시 진입 거부
     gap_filter_pct: float = 3.0
     vi_warn_pct: float = 9.0
     limit_veto_pct: float = 27.0

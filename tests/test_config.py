@@ -147,3 +147,14 @@ def test_validate_high_risk_warns(caplog):
 def test_default_scan_start():
     """장전 스캔 시작 시각은 기본 0830."""
     assert Config().scan_start == "0830"
+
+
+def test_tr_id_cap_rank_same_for_both():
+    """시가총액 상위 랭킹 TR은 모의/실전 동일."""
+    assert Config(is_paper=True).tr_id("cap_rank") == "FHPST01740000"
+    assert Config(is_paper=False).tr_id("cap_rank") == "FHPST01740000"
+
+
+def test_default_max_ext_pct():
+    """과열 필터 기본값 — EMA20 대비 +12% 초과 시 진입 거부."""
+    assert Config().max_ext_pct == 12.0
