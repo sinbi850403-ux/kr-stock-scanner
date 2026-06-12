@@ -25,8 +25,8 @@ def fmt_scan_signal(sig, name, provisional=True) -> str:
     tag = "<i>(장중 잠정)</i>" if provisional else "<b>(마감 확정)</b>"
     tier = f"🌟{sig.score}/6" if sig.score >= 6 else f"⭐{sig.score}/6"
     risk = sig.entry_price - sig.sl_price
-    tp1 = sig.entry_price + risk * 0.8
-    tp2 = sig.entry_price + risk * 1.5
+    tp1 = sig.entry_price + risk * 1.0
+    tp2 = sig.entry_price + risk * 2.5
     return (f"📈 <b>[{_esc(name)}] {_esc(sig.symbol)}</b> 매수신호 {tag}\n"
             f"등급: {tier} ({sig.score}/6) | 거래량 {sig.rvol:.1f}x\n"
             f"현재가: {sig.entry_price:,.0f}원\n"

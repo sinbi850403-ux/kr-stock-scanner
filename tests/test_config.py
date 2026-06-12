@@ -25,7 +25,7 @@ def test_default_risk_and_safety():
     assert c.max_positions == 1
     assert c.max_daily_trades == 3
     assert c.daily_max_loss_pct == 0.03
-    assert (c.tp1_r, c.tp2_r, c.tp3_r) == (0.8, 1.5, 2.5)
+    assert (c.tp1_r, c.tp2_r, c.tp3_r) == (1.0, 2.5, 4.0)
 
 
 # ── base_url 전환 ───────────────────────────────────────

@@ -92,9 +92,9 @@ class Config:
     # ── 리스크 ──
     risk_pct: float = 0.01
     sl_atr_mult: float = 2.0
-    tp1_r: float = 0.8
-    tp2_r: float = 1.5
-    tp3_r: float = 2.5
+    tp1_r: float = 1.0
+    tp2_r: float = 2.5
+    tp3_r: float = 4.0
     be_trig_r: float = 1.0
 
     # ── 게이트 ──

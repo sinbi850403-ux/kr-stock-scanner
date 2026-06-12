@@ -86,6 +86,12 @@ class MockNotifier:
     def alert_error(self, *a, **k):
         self.calls.append("error")
 
+    def alert_watch_sl(self, *a, **k):
+        self.calls.append("watch_sl")
+
+    def alert_watch_tp(self, *a, **k):
+        self.calls.append("watch_tp")
+
 
 def _bot(tmp_path, client=None, scanner=None, trader=None, notifier=None, cfg=None):
     return m.TradingBot(

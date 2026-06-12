@@ -79,7 +79,7 @@ def test_execute_signal_places_buy_and_tps():
     assert ei.holding_qty == 100
     assert c.buys == [("005930", 100, None)]            # 시장가 매수
     assert len(c.sells) == 3                            # TP1/2/3 지정가
-    assert c.sells[0] == ("005930", 33, 71000)
+    assert c.sells[0] == ("005930", 33, 71200)
     assert ei.order_ids["entry"] == "BUY1"
     assert ("entry",) == n.calls[0][:1]
 

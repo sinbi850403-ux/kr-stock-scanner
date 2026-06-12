@@ -32,9 +32,9 @@ def test_calc_trade_basic():
     assert tp is not None
     assert tp.total_qty == 100
     assert (tp.qty1, tp.qty2, tp.qty3) == (33, 33, 34)
-    assert tp.tp1_price == 71000
-    assert tp.tp2_price == 71700
-    assert tp.tp3_price == 72700
+    assert tp.tp1_price == 71200
+    assert tp.tp2_price == 72700
+    assert tp.tp3_price == 74200
     assert tp.sl_price == 69200
     assert tp.risk_r == pytest.approx(1000.0)
 
