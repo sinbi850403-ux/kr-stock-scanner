@@ -23,16 +23,16 @@ def _checks(layers: dict) -> str:
 
 def fmt_scan_signal(sig, name, provisional=True) -> str:
     tag = "<i>(장중 잠정)</i>" if provisional else "<b>(마감 확정)</b>"
-    if sig.score >= 6:
-        tier = f"🌟{sig.score}/6"
-        header = ""
-    else:
-        tier = f"⭐{sig.score}/6"
-        header = ""
-    return (f"{header}📈 <b>[{_esc(name)}] {_esc(sig.symbol)}</b> 매수신호 {tag}\n"
+    tier = f"🌟{sig.score}/6" if sig.score >= 6 else f"⭐{sig.score}/6"
+    risk = sig.entry_price - sig.sl_price
+    tp1 = sig.entry_price + risk * 0.8
+    tp2 = sig.entry_price + risk * 1.5
+    return (f"📈 <b>[{_esc(name)}] {_esc(sig.symbol)}</b> 매수신호 {tag}\n"
             f"등급: {tier} ({sig.score}/6) | 거래량 {sig.rvol:.1f}x\n"
             f"현재가: {sig.entry_price:,.0f}원\n"
             f"손절: {sig.sl_price:,.0f}원\n"
+            f"목표1: {tp1:,.0f}원 (+{(tp1/sig.entry_price-1)*100:.1f}%) | "
+            f"목표2: {tp2:,.0f}원 (+{(tp2/sig.entry_price-1)*100:.1f}%)\n"
             f"{_checks(sig.layers)}")
 
 
@@ -98,6 +98,23 @@ class Notifier:
 
     def alert_counter(self, symbol, entry, price, reason):
         return self.send(fmt_counter(symbol, entry, price, reason))
+
+    def alert_watch_tp(self, n, symbol, name, entry, cur, pnl_pct, tp2=None):
+        next_line = f"\n다음 목표: {tp2:,.0f}원" if tp2 else "\n🎯 전량 청산 타이밍"
+        sl_note = "\n✅ 손절선 → 진입가로 상향 (본전 보호)" if n == 1 else ""
+        return self.send(
+            f"{'📈' if n == 1 else '🏆'} <b>목표{n} 도달 [{_esc(symbol)}]</b>\n"
+            f"종목: {_esc(name)}\n"
+            f"진입 {entry:,.0f}원 → 현재 {cur:,.0f}원 ({pnl_pct:+.1f}%)"
+            f"{sl_note}{next_line}"
+        )
+
+    def alert_watch_sl(self, symbol, name, entry, sl, cur, pnl_pct):
+        return self.send(
+            f"🔴 <b>손절 도달 [{_esc(symbol)}]</b>\n"
+            f"종목: {_esc(name)}\n"
+            f"진입 {entry:,.0f}원 → 손절 {sl:,.0f}원 | 현재 {cur:,.0f}원 ({pnl_pct:+.1f}%)"
+        )
 
     def alert_error(self, msg):
         return self.send(f"🛑 <b>에러</b>\n{_esc(msg)}")

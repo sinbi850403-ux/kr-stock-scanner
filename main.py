@@ -23,6 +23,7 @@ import gates
 import strategy
 import api_server
 import siglog
+from position_tracker import PositionTracker
 from config import Config
 from kis_client import KISClient
 from scanner import Scanner
@@ -57,6 +58,7 @@ class TradingBot:
         self.start_balance = 0.0
         self.last_reset_date = None
         self.counter_checked = set()        # {f"{date}_{slot}"} — 슬롯별 1회 체크
+        self.tracker = PositionTracker()
 
     # ── 상태 영속화 ──
     def save_state(self):
@@ -161,6 +163,10 @@ class TradingBot:
         if phase == "closed":
             return
 
+        # 장중이면 수동 포지션 추적 (자동매매와 무관하게 항상 실행)
+        if phase in ("entry", "scan"):
+            self.tracker.check(self.client, self.notifier, now)
+
         if self.entry_info is not None:
             self._manage_position(now)
             return
@@ -257,6 +263,7 @@ class TradingBot:
                 self.notifier.alert_scan_signal(sig, name, provisional=False)
                 self.alerted.add(key)
                 siglog.log_signal(sig, name, "postclose", now)
+                self._track_signal(sig, name, now)
 
     def _evening_scan(self, now):
         """17시 추가 스캔 — 새 종목만 pending 병합 + 알림. 하루 1회."""
@@ -272,6 +279,7 @@ class TradingBot:
                 self.notifier.alert_scan_signal(sig, name, provisional=False)
                 self.alerted.add(key)
                 siglog.log_signal(sig, name, "evening", now)
+                self._track_signal(sig, name, now)
             if sig.symbol not in existing_syms:
                 self.pending_signals.append((name, sig))
                 existing_syms.add(sig.symbol)
@@ -283,6 +291,17 @@ class TradingBot:
                 self.notifier.alert_scan_signal(sig, name, provisional=True)
                 self.alerted.add(key)
                 siglog.log_signal(sig, name, "intraday", now)
+                self._track_signal(sig, name, now)
+
+    # ── 포지션 추적 등록 ──
+    def _track_signal(self, sig, name, now):
+        risk = sig.entry_price - sig.sl_price
+        if risk <= 0:
+            return
+        tp1 = sig.entry_price + risk * self.cfg.tp1_r
+        tp2 = sig.entry_price + risk * self.cfg.tp2_r
+        self.tracker.add(sig.symbol, name, sig.entry_price,
+                         sig.sl_price, tp1, tp2, now)
 
     # ── 청산 후처리 ──
     def _on_close(self, pnl, now):
